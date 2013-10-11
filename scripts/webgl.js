@@ -6,65 +6,3767 @@
 ///////////////////////////////////////////////////////////////////////////80*/
 var WebGL = (function (exports)
 {
-    /// Defines some constant values used to distinguish between shader types
-    /// without relying on having a valid WebGLRenderingContext object. These
-    /// types are passed to the errorFunc callback of GLContext.buildProgram().
-    const BuildStage    = {
-        /// Specifies that the error occurred while compiling a vertex shader,
-        /// and the sourceCode field specifies the vertex shader source code.
-        COMPILE_VS      : 0,
-        /// Specifies that the error occurred while compiling a fragment shader,
-        /// and the sourceCode field specifies the fragment shader source code.
-        COMPILE_FS      : 1,
-        /// Specifies that the error occurred during the program linking stage.
-        LINK_PROGRAM    : 2,
+    /// @summary Duplicates of constants from the WebGL specification and
+    /// various extension specifications. We duplicate these here so that a
+    /// context is not required to assign them within resource proxy objects.
+    const WebGLConstants = {
+        DEPTH_BUFFER_BIT                              : 0x00000100,
+        STENCIL_BUFFER_BIT                            : 0x00000400,
+        COLOR_BUFFER_BIT                              : 0x00004000,
+        POINTS                                        : 0x0000,
+        LINES                                         : 0x0001,
+        LINE_LOOP                                     : 0x0002,
+        LINE_STRIP                                    : 0x0003,
+        TRIANGLES                                     : 0x0004,
+        TRIANGLE_STRIP                                : 0x0005,
+        TRIANGLE_FAN                                  : 0x0006,
+        ZERO                                          : 0,
+        ONE                                           : 1,
+        SRC_COLOR                                     : 0x0300,
+        ONE_MINUS_SRC_COLOR                           : 0x0301,
+        SRC_ALPHA                                     : 0x0302,
+        ONE_MINUS_SRC_ALPHA                           : 0x0303,
+        DST_ALPHA                                     : 0x0304,
+        ONE_MINUS_DST_ALPHA                           : 0x0305,
+        DST_COLOR                                     : 0x0306,
+        ONE_MINUS_DST_COLOR                           : 0x0307,
+        SRC_ALPHA_SATURATE                            : 0x0308,
+        FUNC_ADD                                      : 0x8006,
+        BLEND_EQUATION                                : 0x8009,
+        BLEND_EQUATION_RGB                            : 0x8009,
+        BLEND_EQUATION_ALPHA                          : 0x883D,
+        FUNC_SUBTRACT                                 : 0x800A,
+        FUNC_REVERSE_SUBTRACT                         : 0x800B,
+        BLEND_DST_RGB                                 : 0x80C8,
+        BLEND_SRC_RGB                                 : 0x80C9,
+        BLEND_DST_ALPHA                               : 0x80CA,
+        BLEND_SRC_ALPHA                               : 0x80CB,
+        CONSTANT_COLOR                                : 0x8001,
+        ONE_MINUS_CONSTANT_COLOR                      : 0x8002,
+        CONSTANT_ALPHA                                : 0x8003,
+        ONE_MINUS_CONSTANT_ALPHA                      : 0x8004,
+        BLEND_COLOR                                   : 0x8005,
+        ARRAY_BUFFER                                  : 0x8892,
+        ELEMENT_ARRAY_BUFFER                          : 0x8893,
+        ARRAY_BUFFER_BINDING                          : 0x8894,
+        ELEMENT_ARRAY_BUFFER_BINDING                  : 0x8895,
+        STREAM_DRAW                                   : 0x88E0,
+        STATIC_DRAW                                   : 0x88E4,
+        DYNAMIC_DRAW                                  : 0x88E8,
+        BUFFER_SIZE                                   : 0x8764,
+        BUFFER_USAGE                                  : 0x8765,
+        CURRENT_VERTEX_ATTRIB                         : 0x8626,
+        FRONT                                         : 0x0404,
+        BACK                                          : 0x0405,
+        FRONT_AND_BACK                                : 0x0408,
+        CULL_FACE                                     : 0x0B44,
+        BLEND                                         : 0x0BE2,
+        DITHER                                        : 0x0BD0,
+        STENCIL_TEST                                  : 0x0B90,
+        DEPTH_TEST                                    : 0x0B71,
+        SCISSOR_TEST                                  : 0x0C11,
+        POLYGON_OFFSET_FILL                           : 0x8037,
+        SAMPLE_ALPHA_TO_COVERAGE                      : 0x809E,
+        SAMPLE_COVERAGE                               : 0x80A0,
+        NO_ERROR                                      : 0,
+        INVALID_ENUM                                  : 0x0500,
+        INVALID_VALUE                                 : 0x0501,
+        INVALID_OPERATION                             : 0x0502,
+        OUT_OF_MEMORY                                 : 0x0505,
+        CW                                            : 0x0900,
+        CCW                                           : 0x0901,
+        LINE_WIDTH                                    : 0x0B21,
+        ALIASED_POINT_SIZE_RANGE                      : 0x846D,
+        ALIASED_LINE_WIDTH_RANGE                      : 0x846E,
+        CULL_FACE_MODE                                : 0x0B45,
+        FRONT_FACE                                    : 0x0B46,
+        DEPTH_RANGE                                   : 0x0B70,
+        DEPTH_WRITEMASK                               : 0x0B72,
+        DEPTH_CLEAR_VALUE                             : 0x0B73,
+        DEPTH_FUNC                                    : 0x0B74,
+        STENCIL_CLEAR_VALUE                           : 0x0B91,
+        STENCIL_FUNC                                  : 0x0B92,
+        STENCIL_FAIL                                  : 0x0B94,
+        STENCIL_PASS_DEPTH_FAIL                       : 0x0B95,
+        STENCIL_PASS_DEPTH_PASS                       : 0x0B96,
+        STENCIL_REF                                   : 0x0B97,
+        STENCIL_VALUE_MASK                            : 0x0B93,
+        STENCIL_WRITEMASK                             : 0x0B98,
+        STENCIL_BACK_FUNC                             : 0x8800,
+        STENCIL_BACK_FAIL                             : 0x8801,
+        STENCIL_BACK_PASS_DEPTH_FAIL                  : 0x8802,
+        STENCIL_BACK_PASS_DEPTH_PASS                  : 0x8803,
+        STENCIL_BACK_REF                              : 0x8CA3,
+        STENCIL_BACK_VALUE_MASK                       : 0x8CA4,
+        STENCIL_BACK_WRITEMASK                        : 0x8CA5,
+        VIEWPORT                                      : 0x0BA2,
+        SCISSOR_BOX                                   : 0x0C10,
+        COLOR_CLEAR_VALUE                             : 0x0C22,
+        COLOR_WRITEMASK                               : 0x0C23,
+        UNPACK_ALIGNMENT                              : 0x0CF5,
+        PACK_ALIGNMENT                                : 0x0D05,
+        MAX_TEXTURE_SIZE                              : 0x0D33,
+        MAX_VIEWPORT_DIMS                             : 0x0D3A,
+        SUBPIXEL_BITS                                 : 0x0D50,
+        RED_BITS                                      : 0x0D52,
+        GREEN_BITS                                    : 0x0D53,
+        BLUE_BITS                                     : 0x0D54,
+        ALPHA_BITS                                    : 0x0D55,
+        DEPTH_BITS                                    : 0x0D56,
+        STENCIL_BITS                                  : 0x0D57,
+        POLYGON_OFFSET_UNITS                          : 0x2A00,
+        POLYGON_OFFSET_FACTOR                         : 0x8038,
+        TEXTURE_BINDING_2D                            : 0x8069,
+        SAMPLE_BUFFERS                                : 0x80A8,
+        SAMPLES                                       : 0x80A9,
+        SAMPLE_COVERAGE_VALUE                         : 0x80AA,
+        SAMPLE_COVERAGE_INVERT                        : 0x80AB,
+        COMPRESSED_TEXTURE_FORMATS                    : 0x86A3,
+        DONT_CARE                                     : 0x1100,
+        FASTEST                                       : 0x1101,
+        NICEST                                        : 0x1102,
+        GENERATE_MIPMAP_HINT                          : 0x8192,
+        BYTE                                          : 0x1400,
+        UNSIGNED_BYTE                                 : 0x1401,
+        SHORT                                         : 0x1402,
+        UNSIGNED_SHORT                                : 0x1403,
+        INT                                           : 0x1404,
+        UNSIGNED_INT                                  : 0x1405,
+        FLOAT                                         : 0x1406,
+        DEPTH_COMPONENT                               : 0x1902,
+        ALPHA                                         : 0x1906,
+        RGB                                           : 0x1907,
+        RGBA                                          : 0x1908,
+        LUMINANCE                                     : 0x1909,
+        LUMINANCE_ALPHA                               : 0x190A,
+        UNSIGNED_SHORT_4_4_4_4                        : 0x8033,
+        UNSIGNED_SHORT_5_5_5_1                        : 0x8034,
+        UNSIGNED_SHORT_5_6_5                          : 0x8363,
+        FRAGMENT_SHADER                               : 0x8B30,
+        VERTEX_SHADER                                 : 0x8B31,
+        MAX_VERTEX_ATTRIBS                            : 0x8869,
+        MAX_VERTEX_UNIFORM_VECTORS                    : 0x8DFB,
+        MAX_VARYING_VECTORS                           : 0x8DFC,
+        MAX_COMBINED_TEXTURE_IMAGE_UNITS              : 0x8B4D,
+        MAX_VERTEX_TEXTURE_IMAGE_UNITS                : 0x8B4C,
+        MAX_TEXTURE_IMAGE_UNITS                       : 0x8872,
+        MAX_FRAGMENT_UNIFORM_VECTORS                  : 0x8DFD,
+        SHADER_TYPE                                   : 0x8B4F,
+        DELETE_STATUS                                 : 0x8B80,
+        LINK_STATUS                                   : 0x8B82,
+        VALIDATE_STATUS                               : 0x8B83,
+        ATTACHED_SHADERS                              : 0x8B85,
+        ACTIVE_UNIFORMS                               : 0x8B86,
+        ACTIVE_ATTRIBUTES                             : 0x8B89,
+        SHADING_LANGUAGE_VERSION                      : 0x8B8C,
+        CURRENT_PROGRAM                               : 0x8B8D,
+        NEVER                                         : 0x0200,
+        LESS                                          : 0x0201,
+        EQUAL                                         : 0x0202,
+        LEQUAL                                        : 0x0203,
+        GREATER                                       : 0x0204,
+        NOTEQUAL                                      : 0x0205,
+        GEQUAL                                        : 0x0206,
+        ALWAYS                                        : 0x0207,
+        KEEP                                          : 0x1E00,
+        REPLACE                                       : 0x1E01,
+        INCR                                          : 0x1E02,
+        DECR                                          : 0x1E03,
+        INVERT                                        : 0x150A,
+        INCR_WRAP                                     : 0x8507,
+        DECR_WRAP                                     : 0x8508,
+        VENDOR                                        : 0x1F00,
+        RENDERER                                      : 0x1F01,
+        VERSION                                       : 0x1F02,
+        NEAREST                                       : 0x2600,
+        LINEAR                                        : 0x2601,
+        NEAREST_MIPMAP_NEAREST                        : 0x2700,
+        LINEAR_MIPMAP_NEAREST                         : 0x2701,
+        NEAREST_MIPMAP_LINEAR                         : 0x2702,
+        LINEAR_MIPMAP_LINEAR                          : 0x2703,
+        TEXTURE_MAG_FILTER                            : 0x2800,
+        TEXTURE_MIN_FILTER                            : 0x2801,
+        TEXTURE_WRAP_S                                : 0x2802,
+        TEXTURE_WRAP_T                                : 0x2803,
+        TEXTURE_2D                                    : 0x0DE1,
+        TEXTURE                                       : 0x1702,
+        TEXTURE_CUBE_MAP                              : 0x8513,
+        TEXTURE_BINDING_CUBE_MAP                      : 0x8514,
+        TEXTURE_CUBE_MAP_POSITIVE_X                   : 0x8515,
+        TEXTURE_CUBE_MAP_NEGATIVE_X                   : 0x8516,
+        TEXTURE_CUBE_MAP_POSITIVE_Y                   : 0x8517,
+        TEXTURE_CUBE_MAP_NEGATIVE_Y                   : 0x8518,
+        TEXTURE_CUBE_MAP_POSITIVE_Z                   : 0x8519,
+        TEXTURE_CUBE_MAP_NEGATIVE_Z                   : 0x851A,
+        MAX_CUBE_MAP_TEXTURE_SIZE                     : 0x851C,
+        TEXTURE0                                      : 0x84C0,
+        TEXTURE1                                      : 0x84C1,
+        TEXTURE2                                      : 0x84C2,
+        TEXTURE3                                      : 0x84C3,
+        TEXTURE4                                      : 0x84C4,
+        TEXTURE5                                      : 0x84C5,
+        TEXTURE6                                      : 0x84C6,
+        TEXTURE7                                      : 0x84C7,
+        TEXTURE8                                      : 0x84C8,
+        TEXTURE9                                      : 0x84C9,
+        TEXTURE10                                     : 0x84CA,
+        TEXTURE11                                     : 0x84CB,
+        TEXTURE12                                     : 0x84CC,
+        TEXTURE13                                     : 0x84CD,
+        TEXTURE14                                     : 0x84CE,
+        TEXTURE15                                     : 0x84CF,
+        TEXTURE16                                     : 0x84D0,
+        TEXTURE17                                     : 0x84D1,
+        TEXTURE18                                     : 0x84D2,
+        TEXTURE19                                     : 0x84D3,
+        TEXTURE20                                     : 0x84D4,
+        TEXTURE21                                     : 0x84D5,
+        TEXTURE22                                     : 0x84D6,
+        TEXTURE23                                     : 0x84D7,
+        TEXTURE24                                     : 0x84D8,
+        TEXTURE25                                     : 0x84D9,
+        TEXTURE26                                     : 0x84DA,
+        TEXTURE27                                     : 0x84DB,
+        TEXTURE28                                     : 0x84DC,
+        TEXTURE29                                     : 0x84DD,
+        TEXTURE30                                     : 0x84DE,
+        TEXTURE31                                     : 0x84DF,
+        ACTIVE_TEXTURE                                : 0x84E0,
+        REPEAT                                        : 0x2901,
+        CLAMP_TO_EDGE                                 : 0x812F,
+        MIRRORED_REPEAT                               : 0x8370,
+        FLOAT_VEC2                                    : 0x8B50,
+        FLOAT_VEC3                                    : 0x8B51,
+        FLOAT_VEC4                                    : 0x8B52,
+        INT_VEC2                                      : 0x8B53,
+        INT_VEC3                                      : 0x8B54,
+        INT_VEC4                                      : 0x8B55,
+        BOOL                                          : 0x8B56,
+        BOOL_VEC2                                     : 0x8B57,
+        BOOL_VEC3                                     : 0x8B58,
+        BOOL_VEC4                                     : 0x8B59,
+        FLOAT_MAT2                                    : 0x8B5A,
+        FLOAT_MAT3                                    : 0x8B5B,
+        FLOAT_MAT4                                    : 0x8B5C,
+        SAMPLER_2D                                    : 0x8B5E,
+        SAMPLER_CUBE                                  : 0x8B60,
+        VERTEX_ATTRIB_ARRAY_ENABLED                   : 0x8622,
+        VERTEX_ATTRIB_ARRAY_SIZE                      : 0x8623,
+        VERTEX_ATTRIB_ARRAY_STRIDE                    : 0x8624,
+        VERTEX_ATTRIB_ARRAY_TYPE                      : 0x8625,
+        VERTEX_ATTRIB_ARRAY_NORMALIZED                : 0x886A,
+        VERTEX_ATTRIB_ARRAY_POINTER                   : 0x8645,
+        VERTEX_ATTRIB_ARRAY_BUFFER_BINDING            : 0x889F,
+        COMPILE_STATUS                                : 0x8B81,
+        LOW_FLOAT                                     : 0x8DF0,
+        MEDIUM_FLOAT                                  : 0x8DF1,
+        HIGH_FLOAT                                    : 0x8DF2,
+        LOW_INT                                       : 0x8DF3,
+        MEDIUM_INT                                    : 0x8DF4,
+        HIGH_INT                                      : 0x8DF5,
+        FRAMEBUFFER                                   : 0x8D40,
+        RENDERBUFFER                                  : 0x8D41,
+        RGBA4                                         : 0x8056,
+        RGB5_A1                                       : 0x8057,
+        RGB565                                        : 0x8D62,
+        DEPTH_COMPONENT16                             : 0x81A5,
+        STENCIL_INDEX                                 : 0x1901,
+        STENCIL_INDEX8                                : 0x8D48,
+        DEPTH_STENCIL                                 : 0x84F9,
+        RENDERBUFFER_WIDTH                            : 0x8D42,
+        RENDERBUFFER_HEIGHT                           : 0x8D43,
+        RENDERBUFFER_INTERNAL_FORMAT                  : 0x8D44,
+        RENDERBUFFER_RED_SIZE                         : 0x8D50,
+        RENDERBUFFER_GREEN_SIZE                       : 0x8D51,
+        RENDERBUFFER_BLUE_SIZE                        : 0x8D52,
+        RENDERBUFFER_ALPHA_SIZE                       : 0x8D53,
+        RENDERBUFFER_DEPTH_SIZE                       : 0x8D54,
+        RENDERBUFFER_STENCIL_SIZE                     : 0x8D55,
+        FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE            : 0x8CD0,
+        FRAMEBUFFER_ATTACHMENT_OBJECT_NAME            : 0x8CD1,
+        FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL          : 0x8CD2,
+        FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE  : 0x8CD3,
+        COLOR_ATTACHMENT0                             : 0x8CE0,
+        DEPTH_ATTACHMENT                              : 0x8D00,
+        STENCIL_ATTACHMENT                            : 0x8D20,
+        DEPTH_STENCIL_ATTACHMENT                      : 0x821A,
+        NONE                                          : 0,
+        FRAMEBUFFER_COMPLETE                          : 0x8CD5,
+        FRAMEBUFFER_INCOMPLETE_ATTACHMENT             : 0x8CD6,
+        FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT     : 0x8CD7,
+        FRAMEBUFFER_INCOMPLETE_DIMENSIONS             : 0x8CD9,
+        FRAMEBUFFER_UNSUPPORTED                       : 0x8CDD,
+        FRAMEBUFFER_BINDING                           : 0x8CA6,
+        RENDERBUFFER_BINDING                          : 0x8CA7,
+        MAX_RENDERBUFFER_SIZE                         : 0x84E8,
+        INVALID_FRAMEBUFFER_OPERATION                 : 0x0506,
+        UNPACK_FLIP_Y_WEBGL                           : 0x9240,
+        UNPACK_PREMULTIPLY_ALPHA_WEBGL                : 0x9241,
+        CONTEXT_LOST_WEBGL                            : 0x9242,
+        UNPACK_COLORSPACE_CONVERSION_WEBGL            : 0x9243,
+        BROWSER_DEFAULT_WEBGL                         : 0x9244,
+        /* OES_texture_half_float */
+        HALF_FLOAT_OES                                : 0x8D61,
+        /* OES_standard_derivatives */
+        FRAGMENT_SHADER_DERIVATIVE_HINT_OES           : 0x8B8B,
+        /* OES_vertex_array_object */
+        VERTEX_ARRAY_BINDING_OES                      : 0x85B5,
+        /* WEBGL_debug_renderer_info */
+        UNMASKED_VENDOR_WEBGL                         : 0x9245,
+        UNMASKED_RENDERER_WEBGL                       : 0x9246,
+        /* WEBGL_compressed_texture_s3tc */
+        COMPRESSED_RGB_S3TC_DXT1_EXT                  : 0x83F0,
+        COMPRESSED_RGBA_S3TC_DXT1_EXT                 : 0x83F1,
+        COMPRESSED_RGBA_S3TC_DXT3_EXT                 : 0x83F2,
+        COMPRESSED_RGBA_S3TC_DXT5_EXT                 : 0x83F3,
+        /* WEBGL_depth_texture */
+        UNSIGNED_INT_24_8_WEBGL                       : 0x84FA,
+        /* EXT_texture_filter_anisotropic */
+        TEXTURE_MAX_ANISOTROPY_EXT                    : 0x84FE,
+        MAX_TEXTURE_MAX_ANISOTROPY_EXT                : 0x84FF,
+        /* WEBGL_compressed_texture_atc */
+        COMPRESSED_RGB_ATC_WEBGL                      : 0x8C92,
+        COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL      : 0x8C93,
+        COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL  : 0x87EE,
+        /* WEBGL_compressed_texture_pvrtc */
+        COMPRESSED_RGB_PVRTC_4BPPV1_IMG               : 0x8C00,
+        COMPRESSED_RGB_PVRTC_2BPPV1_IMG               : 0x8C01,
+        COMPRESSED_RGBA_PVRTC_4BPPV1_IMG              : 0x8C02,
+        COMPRESSED_RGBA_PVRTC_2BPPV1_IMG              : 0x8C03,
+        /* EXT_color_buffer_half_float */
+        RGBA16F_EXT                                   : 0x881A,
+        RGB16F_EXT                                    : 0x881B,
+        FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE_EXT     : 0x8211,
+        UNSIGNED_NORMALIZED_EXT                       : 0x8C17,
+        /* WEBGL_color_buffer_float */
+        RGBA32F_EXT                                   : 0x8814,
+        RGB32F_EXT                                    : 0x8815,
+        /* EXT_sRGB */
+        SRGB_EXT                                      : 0x8C40,
+        SRGB_ALPHA_EXT                                : 0x8C42,
+        SRGB8_ALPHA8_EXT                              : 0x8C43,
+        FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING_EXT     : 0x8210,
+        /* WEBGL_draw_buffers */
+        COLOR_ATTACHMENT0_WEBGL                       : 0x8CE0,
+        COLOR_ATTACHMENT1_WEBGL                       : 0x8CE1,
+        COLOR_ATTACHMENT2_WEBGL                       : 0x8CE2,
+        COLOR_ATTACHMENT3_WEBGL                       : 0x8CE3,
+        COLOR_ATTACHMENT4_WEBGL                       : 0x8CE4,
+        COLOR_ATTACHMENT5_WEBGL                       : 0x8CE5,
+        COLOR_ATTACHMENT6_WEBGL                       : 0x8CE6,
+        COLOR_ATTACHMENT7_WEBGL                       : 0x8CE7,
+        COLOR_ATTACHMENT8_WEBGL                       : 0x8CE8,
+        COLOR_ATTACHMENT9_WEBGL                       : 0x8CE9,
+        COLOR_ATTACHMENT10_WEBGL                      : 0x8CEA,
+        COLOR_ATTACHMENT11_WEBGL                      : 0x8CEB,
+        COLOR_ATTACHMENT12_WEBGL                      : 0x8CEC,
+        COLOR_ATTACHMENT13_WEBGL                      : 0x8CED,
+        COLOR_ATTACHMENT14_WEBGL                      : 0x8CEE,
+        COLOR_ATTACHMENT15_WEBGL                      : 0x8CEF,
+        DRAW_BUFFER0_WEBGL                            : 0x8825,
+        DRAW_BUFFER1_WEBGL                            : 0x8826,
+        DRAW_BUFFER2_WEBGL                            : 0x8827,
+        DRAW_BUFFER3_WEBGL                            : 0x8828,
+        DRAW_BUFFER4_WEBGL                            : 0x8829,
+        DRAW_BUFFER5_WEBGL                            : 0x882A,
+        DRAW_BUFFER6_WEBGL                            : 0x882B,
+        DRAW_BUFFER7_WEBGL                            : 0x882C,
+        DRAW_BUFFER8_WEBGL                            : 0x882D,
+        DRAW_BUFFER9_WEBGL                            : 0x882E,
+        DRAW_BUFFER10_WEBGL                           : 0x882F,
+        DRAW_BUFFER11_WEBGL                           : 0x8830,
+        DRAW_BUFFER12_WEBGL                           : 0x8831,
+        DRAW_BUFFER13_WEBGL                           : 0x8832,
+        DRAW_BUFFER14_WEBGL                           : 0x8833,
+        DRAW_BUFFER15_WEBGL                           : 0x8834,
+        MAX_COLOR_ATTACHMENTS_WEBGL                   : 0x8CDF,
+        MAX_DRAW_BUFFERS_WEBGL                        : 0x8824,
+        /* ANGLE_instanced_arrays */
+        VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE             : 0x88FE,
+        /* WEBGL_shared_resources */
+        READ_ONLY                                     : 0x0001,
+        EXCLUSIVE                                     : 0x0004,
+        READ_FRAMEBUFFER                              : 0x8CA8,
+        DRAW_FRAMEBUFFER                              : 0x8CA9,
     };
 
-    /// An object duplicating the definition of the WebGLContext DataType
-    /// enumeration values. This map is used when creating vertex attributes.
-    /// See the WebGL specification for the constant values.
-    const DataType      = {
-        BYTE            : 0x1400,
-        UNSIGNED_BYTE   : 0x1401,
-        SHORT           : 0x1402,
-        UNSIGNED_SHORT  : 0x1403,
-        INT             : 0x1404,
-        UNSIGNED_INT    : 0x1405,
-        FLOAT           : 0x1406
-    };
-
-    /// An array specifying the names of the texture slots that can be passed to
-    /// gl.activeTexture(). This table is used during uniform binding.
-    const TextureSlots  = [
-        'TEXTURE0',  'TEXTURE1',  'TEXTURE2',  'TEXTURE3',  'TEXTURE4',
-        'TEXTURE5',  'TEXTURE6',  'TEXTURE7',  'TEXTURE8',  'TEXTURE9',
-        'TEXTURE10', 'TEXTURE11', 'TEXTURE12', 'TEXTURE13', 'TEXTURE14',
-        'TEXTURE15', 'TEXTURE16', 'TEXTURE17', 'TEXTURE18', 'TEXTURE19',
-        'TEXTURE20', 'TEXTURE21', 'TEXTURE22', 'TEXTURE23', 'TEXTURE24',
-        'TEXTURE25', 'TEXTURE26', 'TEXTURE27', 'TEXTURE28', 'TEXTURE29',
-        'TEXTURE30', 'TEXTURE31'
+    /// @summary A table used to quickly map an index size to the corresponding
+    /// WebGL index type enumeration value.
+    const IndexType         = [
+        WebGLConstants.UNSIGNED_BYTE,
+        WebGLConstants.UNSIGNED_BYTE,
+        WebGLConstants.UNSIGNED_SHORT,
+        WebGLConstants.UNSIGNED_INT,
+        WebGLConstants.UNSIGNED_INT
     ];
 
-    /// An array specifying all of the valid GLSL ES 1.0 type names. This table is
-    /// used during uniform binding.
-    const TypeNames     = {
-        BOOL            : 'bool',
-        INT             : 'int',
-        FLOAT           : 'float',
-        VEC2            : 'vec2',
-        VEC3            : 'vec3',
-        VEC4            : 'vec4',
-        BVEC2           : 'bvec2',
-        BVEC3           : 'bvec3',
-        BVEC4           : 'bvec4',
-        IVEC2           : 'ivec2',
-        IVEC3           : 'ivec3',
-        IVEC4           : 'ivec4',
-        MAT2            : 'mat2',
-        MAT3            : 'mat3',
-        MAT4            : 'mat4',
-        SAMPLER_2D      : 'sampler2D',
-        SAMPLER_CUBE    : 'samplerCube'
+    /// @summary An enumeration defining the various resource types. These
+    /// values are used by the GraphicsContext to look up the resource list
+    /// associate with a given resource.
+    const ResourceType      = {
+        UNKNOWN             : 0,  /// resource is invalid
+        TEXTURE             : 1,  /// 2D texture or cube map
+        DATA_BUFFER         : 2,  /// vertex, index etc. buffer
+        FRAME_BUFFER        : 3,  /// offscreen render target
+        RENDER_BUFFER       : 4,  /// depth or stencil buffer
+        SHADER_PROGRAM      : 5,  /// GLSL shader program object
+        STATE_OBJECT        : 6   /// an object storing a set of render states
+    };
+
+    /// @summary An enumeration defining the various resource sub-types. These
+    /// values are used for informational purposes only.
+    const ResourceSubType   = {
+        UNKNOWN             : 0,  /// resource is invalid
+        VERTEX_BUFFER       : 1,  /// a buffer for storing vertex data
+        ELEMENT_BUFFER      : 2,  /// a buffer for storing index data
+        INDEX_BUFFER        : 2,  /// alias for ELEMENT_BUFFER
+        UNIFORM_BUFFER      : 3,  /// a buffer for storing uniform data
+        GENERIC_BUFFER      : 4,  /// some other type of buffer
+        TEXTURE_2D          : 5,  /// 2D texture object
+        TEXTURE_CUBE        : 6,  /// cube map texture object
+        TEXTURE_DEPTH       : 7,  /// WEBGL_depth_texture
+        RENDER_TARGET       : 8,  /// offscreen target for blit operations
+        PIXEL_BUFFER        : 9,  /// renderbuffer used for image processing
+        DEPTH_BUFFER        : 10, /// renderbuffer used for storing depth
+        STENCIL_BUFFER      : 11, /// renderbuffer used for stencil data
+        DEPTH_STENCIL_BUFFER: 12, /// renderbuffer used for depth+stencil data
+        GRAPHICS_SHADER     : 13, /// standard vertex+pixel shader program
+        COMPUTE_SHADER      : 14, /// WebCL-style compute shader program
+        BLEND_STATE         : 15, /// a group of states for alpha blending
+        DEPTH_STENCIL_STATE : 16, /// a group of states for depth/stencil test
+        RASTER_STATE        : 17  /// a group of states for primitive raster
+    };
+
+    /// @summary An array whose elements consist of the names of all of the
+    /// valid texture slots. WebGL 1.0 defines 32 texture slots.
+    const TextureSlots      = [
+        WebGLConstants.TEXTURE0,
+        WebGLConstants.TEXTURE1,
+        WebGLConstants.TEXTURE2,
+        WebGLConstants.TEXTURE3,
+        WebGLConstants.TEXTURE4,
+        WebGLConstants.TEXTURE5,
+        WebGLConstants.TEXTURE6,
+        WebGLConstants.TEXTURE7,
+        WebGLConstants.TEXTURE8,
+        WebGLConstants.TEXTURE9,
+        WebGLConstants.TEXTURE10,
+        WebGLConstants.TEXTURE11,
+        WebGLConstants.TEXTURE12,
+        WebGLConstants.TEXTURE13,
+        WebGLConstants.TEXTURE14,
+        WebGLConstants.TEXTURE15,
+        WebGLConstants.TEXTURE16,
+        WebGLConstants.TEXTURE17,
+        WebGLConstants.TEXTURE18,
+        WebGLConstants.TEXTURE19,
+        WebGLConstants.TEXTURE20,
+        WebGLConstants.TEXTURE21,
+        WebGLConstants.TEXTURE22,
+        WebGLConstants.TEXTURE23,
+        WebGLConstants.TEXTURE24,
+        WebGLConstants.TEXTURE25,
+        WebGLConstants.TEXTURE26,
+        WebGLConstants.TEXTURE27,
+        WebGLConstants.TEXTURE28,
+        WebGLConstants.TEXTURE29,
+        WebGLConstants.TEXTURE30,
+        WebGLConstants.TEXTURE31
+    ];
+
+    /// @summary A table mapping a string GLSL data type name to its
+    /// corresponding integer/enum value.
+    var WebGLShaderDataTypes     = null;
+
+    /// @summary A value indicating whether the string => enum table for the
+    /// GLSL data types needs to be initialized. After initialization, this
+    /// value is set to false.
+    var WebGLShaderDataTypesInit = true;
+
+    /// @summary A table mapping a value from ResourceType to the string
+    /// corresponding to the property name.
+    var WebGLBaseTypeStrings     = null;
+
+    /// @summary A table mapping a value from ResourceSubType to the string
+    /// corresponding to the property name.
+    var WebGLSubTypeStrings      = null;
+
+    /// @summary A table mapping a value from WebGLConstants to the string
+    /// corresponding to its property name. The string is a raw, undecorated
+    /// value that can be used as a key into WebGLContext or a WebGL context.
+    var WebGLEnumStringsRaw      = null;
+
+    /// @summary A table mapping a value from WebGLConstants to the string
+    /// corresponding to its property name. The string is decorated such that
+    /// the enum name is prefixed with 'GL_', and the hexadecimal numeric
+    /// value is pre-pended.
+    var WebGLEnumStringsPretty   = null;
+
+    /// @summary A value indicating whether the enum => string tables need to
+    /// be initialized. After initialization, this value is set to false.
+    var WebGLEnumStringsInit     = true;
+
+    /// @summary Initializes the WebGLShaderDataTypes table, if it has not
+    /// already been initialized.
+    function initGLSLTable()
+    {
+        if (WebGLShaderDataTypesInit)
+        {
+            WebGLShaderDataTypesInit = false;
+            var type_names = [
+                'float',  'vec2',  'vec3',  'vec4',
+                'int'  , 'ivec2', 'ivec3', 'ivec4',
+                'bool' , 'bvec2', 'bvec3', 'bvec4',
+                'mat2' , 'mat3' ,  'mat4', 'sampler2D', 'samplerCube'
+            ];
+            var type_value = [
+                WebGLConstants.FLOAT,
+                WebGLConstants.FLOAT_VEC2,
+                WebGLConstants.FLOAT_VEC3,
+                WebGLConstants.FLOAT_VEC4,
+                WebGLConstants.INT,
+                WebGLConstants.INT_VEC2,
+                WebGLConstants.INT_VEC3,
+                WebGLConstants.INT_VEC4,
+                WebGLConstants.BOOL,
+                WebGLConstants.BOOL_VEC2,
+                WebGLConstants.BOOL_VEC3,
+                WebGLConstants.BOOL_VEC4,
+                WebGLConstants.FLOAT_MAT2,
+                WebGLConstants.FLOAT_MAT3,
+                WebGLConstants.FLOAT_MAT4,
+                WebGLConstants.SAMPLER_2D,
+                WebGLConstants.SAMPLER_CUBE
+            ];
+            var table  = {};
+            for (var i = 0, n = type_names.length; i < n; ++i)
+            {
+                table[type_names[i]] = type_value[i]
+            }
+            WebGLShaderDataTypes = table;
+        }
+    }
+
+    /// @summary Initializes the WebGLEnumStringsRaw and WebGLEnumStringsPretty
+    /// tables, if they have not already been initialized.
+    function initEnumStrings()
+    {
+        if (WebGLEnumStringsInit)
+        {
+            WebGLEnumStringsInit = false;
+            var table_raw  = {}
+            var table_dec  = {}
+            var enums      = WebGLConstants;
+            for (var name in enums)
+            {
+                var value  = enums[name];
+                var str    = 'GL_' + name;
+                var hex    = '0x'  + value.toString(16);
+                table_raw[value]   = name;
+                table_dec[value]   = hex + ' ('+str+')';
+            }
+            WebGLEnumStringsRaw    = table_raw;
+            WebGLEnumStringsPretty = table_dec;
+
+            var table_base = {};
+            var table_sub  = {};
+            var enums_base = ResourceType;
+            var enums_sub  = ResourceSubType;
+            for (var name in enums_base)
+            {
+                var value  = enums_base[name];
+                table_base[value] = name;
+            }
+            for (var name in enums_sub)
+            {
+                var value  = enums_sub[name];
+                table_sub[value]  = name;
+            }
+            WebGLBaseTypeStrings = table_base;
+            WebGLSubTypeStrings  = table_sub;
+        }
+    }
+
+    /// @summary Converts a ResourceType enum value into its corresponding
+    /// string name. The resulting string can be used as a key in ResourceType.
+    /// @param value The numeric enum value.
+    /// @returns The string equivalent of the enum value, or undefined.
+    function basetype(value)
+    {
+        if (WebGLEnumStringsInit)
+        {
+            initEnumStrings();
+        }
+        return WebGLBaseTypeStrings[value];
+    }
+
+    /// @summary Converts a ResourceSubType enum value into its corresponding
+    /// string name. The resulting string can be used as a key in the
+    /// ResourceSubType table.
+    /// @param value The numeric enum value.
+    /// @returns The string equivalent of the enum value, or undefined.
+    function subtype(value)
+    {
+        if (WebGLEnumStringsInit)
+        {
+            initEnumStrings();
+        }
+        return WebGLSubTypeStrings[value];
+    }
+
+    /// @summary Converts a WebGL enum value into its corresponding string name.
+    /// The returned string can be used as a key in WebGLConstants or a
+    /// WebGLRenderingContext object.
+    /// @param value The numeric enum value.
+    /// @returns The string equivalent of the enum value, or 'INVALID_ENUM' if
+    /// a value is specified that does not correspond to a valid enum value.
+    function enumraw(value)
+    {
+        if (WebGLEnumStringsInit)
+        {
+            initEnumStrings();
+        }
+        var str   = WebGLEnumStringsRaw[value];
+        if (str === undefined)
+            str   = 'INVALID_ENUM';
+        return str;
+    }
+
+    /// @summary Converts a WebGL enum value into its corresponding string name.
+    /// The hexadecimal value of the enum is encoded as well. This function is
+    /// intended for displaying debug output.
+    /// @param value The numeric enum value.
+    /// @returns A string in the format '0x1902 (GL_DEPTH_COMPONENT)'.
+    function enumfmt(value)
+    {
+        if (WebGLEnumStringsInit)
+        {
+            initEnumStrings();
+        }
+        var str   = WebGLEnumStrings[value];
+        if (str === undefined)
+            str   = '0x' + value.toString(16) + ' (INVALID_ENUM)';
+        return str;
+    }
+
+    /// @summary Performs a test to determine whether the current runtime
+    /// environment supports WebGL; however, just because the runtime supports
+    /// WebGL does not guarantee that context creation will be successful.
+    /// @return true if the runtime environment supports WebGL.
+    function supported()
+    {
+        return (window.WebGLRenderingContext ? true : false);
+    }
+
+    /// @summary Attempts to create a new WebGL rendering context.
+    /// @param canvas The HTMLCanvasElement into which WebGL will render.
+    /// @param attributes A WebGLContextAttributes object. See:
+    /// https://www.khronos.org/registry/webgl/specs/1.0/#5.2
+    /// @param attributes.debug Specify true to return a debug context.
+    /// @param attributes.logCallback A function (func_name, args) to call for 
+    /// each low-level WebGL call performed. Specifying a callback implies the 
+    /// @a attributes.debug flag is set to true.
+    /// @param attributes.errorCallback  A function (error, func_name, args) to
+    /// call whenever an error is returned from gl.getError(). Specifying a 
+    /// callback implies the @a attributes.debug flag is set to true.
+    /// @return A new instance of GraphicsContext, or undefined if WebGL is not
+    /// supported or the context cannot be created for some reason.
+    function createContext(canvas, attributes)
+    {
+        var gl    = null;
+        var names = [
+            'webgl',
+            'experimental-webgl',
+            'webkit-3d',
+            'moz-webgl'
+        ];
+        for (var i = 0, n = names.length; i < n; ++i)
+        {
+            try {
+                gl = canvas.getContext(names[i], attributes);
+                if (gl)
+                {
+                    // do any one-time setup, and return the context.
+                    initGLSLTable();
+                    initEnumStrings();
+                    if (attributes.logCallback || attributes.errorCallback)
+                        attributes.debug = true;
+                    if (attributes.debug && WebGLDebugUtils)
+                    {
+                        WebGLDebugUtils.init();
+                        gl = WebGLDebugUtils.makeDebugContext(
+                            gl, 
+                            attributes.errorCallback, 
+                            attributes.logCallback);
+                    }
+                    return gl;
+                }
+            }
+            catch (error) {
+                /* empty */
+            }
+        }
+    }
+
+    /// @summary Creates an object describing a single field within an element
+    /// structure stored in a data buffer.
+    /// @param name The name of the field. This should match the name of
+    /// the corresponding attribute in the shader program.
+    /// @param type A string value indicating the field data type, one of
+    /// BYTE, UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, INT, UNSIGNED_INT or FLOAT.
+    /// @param offset The byte offset of the field from the start of the
+    /// element structure.
+    /// @param dimension The number of values of the specified type that make
+    /// up the field, for example, 3 to specify a 3-component vector.
+    /// @param normalize A boolean value indicating whether the runtime should
+    /// convert non-floating point data into a normalized floating-point value
+    /// in the range [0, 1] prior to exposing it to the shader.
+     /// @return An object describing the element field.
+    /// obj.name The name of the field.
+    /// obj.dataType The WebGL data type of the field.
+    /// obj.byteOffset The byte offset from the start of the vertex.
+    /// obj.dimension The number of values that make up the field.
+    /// obj.normalize A boolean value indicating whether the hardware will
+    /// convert non-floating point data into the range [0, 1] before use.
+    function field(name, type, offset, dimension, normalize)
+    {
+        return {
+            name        : name,
+            dataType    : WebGLConstants[type],
+            byteOffset  : offset,
+            dimension   : dimension,
+            normalize   : normalize
+        };
+    }
+
+    /// @summary Calculates the size of a single field of an element record.
+    /// @param field The field definition, as returned by WebGL.field().
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return The size of the specified field, in bytes.
+    function fieldSize(field, debug)
+    {
+        if (field)
+        {
+            var GL = WebGLConstants;
+            switch  (field.dataType)
+            {
+                case GL.FLOAT:
+                case GL.INT:
+                case GL.UNSIGNED_INT:
+                    return 4 * field.dimension;
+
+                case GL.BYTE:
+                case GL.UNSIGNED_BYTE:
+                    return 1 * field.dimension;
+
+                case GL.SHORT:
+                case GL.UNSIGNED_SHORT:
+                    return 2 * field.dimension;
+
+                default:
+                    break;
+            }
+        }
+        return 0;
+    }
+
+    /// @summary Calculates the size of a logical buffer element comprised of
+    /// one or more fields.
+    /// @param fields An array of field descriptor objects. See WebGL.field().
+    /// The fields must be sorted into order by byte offset.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return The size of the logical element structure, in bytes.
+    function elementSize(fields, debug)
+    {
+        var n    = fields.length;
+        if (n  === 0)
+            return 0;
+        // sum the byte offsets and then add in the size of the final attribute.
+        // this ensures that user-added padding is properly accounted for.
+        var e = fields[n - 1];
+        var o = e.byteOffset;
+        var s = fieldSize(e, debug);
+        return (o+s);
+    }
+
+    /// @summary A comparison function used for ordering fields by byte offset.
+    /// @param a A field descriptor object. See WebGL.field().
+    /// @param b A field descriptor object. See WebGL.field().
+    /// @return 0 if the byte offsets of a and b are equal, +1 if the byte
+    /// offset of a is greater than that of b, or -1 if the byte offset of a is
+    /// less than the byte offset of b.
+    function orderByByteOffset(a, b)
+    {
+        if (a.byteOffset > b.byteOffset)
+            return +1;
+        if (a.byteOffset < b.byteOffset)
+            return -1;
+        return 0;
+    }
+
+    /// @summary Creates an object containing array buffer views, strides and
+    /// offsets for a given data buffer. The returned object allows for dynamic
+    /// modification of interleaved buffers.
+    /// @param data The ArrayBuffer used for storing the interleaved data.
+    /// @param fields An array of element field descriptors describing the
+    /// structure of each logical element in the buffer. See WebGL.field().
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return An object providing access to the interleaved data.
+    /// obj.arrayViews An array of @a fields.length ArrayBufferView instances
+    /// of the appropriate type (Float32Array, etc.)
+    /// obj.baseOffsets An array of @a fields.length numbers specifying the
+    /// base offset within obj.arrayViews of the field data in units of the
+    /// appropriate type (Float32, etc.) These values should remain constant.
+    /// obj.offsets An array of @a fields.length numbers specifying the current
+    /// offset within obj.arrayViews of the attribute data for the current
+    /// element field, in units of the appropriate type. Values in this array
+    /// are intended to be modified during buffer iteration, and may be reset
+    /// to the base offsets by calling WebGL.resetBufferView().
+    /// obj.sizes An array of @a fields.length numbers specifying the size of
+    /// each element field, in units of the appropriate type. These values
+    /// should remain constant and not be modified by the caller.
+    function createBufferView(data, fields, debug)
+    {
+        var GL      = WebGLConstants;
+        var stride  = elementSize(fields, debug);
+        var offsets = new Array(fields.length);
+        var current = new Array(fields.length);
+        var sizes   = new Array(fields.length);
+        var views   = new Array(fields.length);
+
+        for (var i  = 0,  n   = fields.length; i < n; ++i)
+        {
+            var rec = fields[i];
+            var ofs = rec.byteOffset;
+            switch   (rec.dataType)
+            {
+                case GL.FLOAT:
+                    views[i]   = new Float32Array(data);
+                    sizes[i]   = stride / 4;
+                    offsets[i] = ofs    / 4;
+                    current[i] = ofs    / 4;
+                    break;
+
+                case GL.UNSIGNED_BYTE:
+                    views[i]   = new Uint8Array(data);
+                    sizes[i]   = stride / 1;
+                    offsets[i] = ofs    / 1;
+                    current[i] = ofs    / 1;
+                    break;
+
+                case GL.UNSIGNED_SHORT:
+                    views[i]   = new Uint16Array(data);
+                    sizes[i]   = stride / 2;
+                    offsets[i] = ofs    / 2;
+                    current[i] = ofs    / 2;
+                    break;
+
+                case GL.UNSIGNED_INT:
+                    views[i]   = new Uint32Array(data);
+                    sizes[i]   = stride / 4;
+                    offsets[i] = ofs    / 4;
+                    current[i] = ofs    / 4;
+                    break;
+
+                case GL.BYTE:
+                    views[i]   = new Int8Array(data);
+                    sizes[i]   = stride / 1;
+                    offsets[i] = ofs    / 1;
+                    current[i] = ofs    / 1;
+                    break;
+
+                case GL.SHORT:
+                    views[i]   = new Int16Array(data);
+                    sizes[i]   = stride / 2;
+                    offsets[i] = ofs    / 2;
+                    current[i] = ofs    / 2;
+                    break;
+
+                case GL.INT:
+                    views[i]   = new Int32Array(data);
+                    sizes[i]   = stride / 4;
+                    offsets[i] = ofs    / 4;
+                    current[i] = ofs    / 4;
+                    break;
+
+                default :
+                    return null;
+            }
+        }
+        return {
+            arrayViews  : views,
+            baseOffsets : offsets,
+            offsets     : current,
+            sizes       : sizes
+        };
+    }
+
+    /// @summary Resets the values in the @a view.offsets field to the base
+    /// values specified by @a view.baseOffsets. This function should be called
+    /// prior to iterating over the contents of the buffer.
+    /// @param views An object providing views into an interleaved buffer. See
+    /// the function WebGL.createBufferView().
+    /// @return A reference to @a view.
+    function resetBufferView(view)
+    {
+        var base    = view.baseOffsets;
+        var curr    = view.offsets;
+        for (var i  = 0, n = curr.length; i < n; ++i)
+            curr[i] = base[i];
+        return view;
+    }
+
+    /// @summary Given an element definition and a set of arrays filled with
+    /// data for each individual element field, constructs an interleaved
+    /// ArrayBuffer filled with the element data.
+    /// @param fields An array of element field definitions specifying the
+    /// layout of the element structure. See WebGL.field().
+    /// @param arrays An array of JavaScript arrays. Each array specifies the
+    /// data for the corresponding element field.
+    /// @param count The number of elements in the buffer.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return An object providing access to the interleaved data.
+    /// obj.data A new ArrayBuffer instance containing the interleaved data.
+    /// This buffer can be directly supplied to a WebGL Buffer's upload method.
+    /// obj.view The data necessary to access and modify the interleaved data,
+    /// as returned by the function WebGL.createBufferView().
+    function interleave(fields, arrays, count, debug)
+    {
+        var stride = elementSize(fields, debug);
+        var buffer = new ArrayBuffer(stride * count);
+        var access = createBufferView(buffer, fields, debug);
+        var offset = access.offsets;
+        var sizes  = access.sizes;
+        var views  = access.arrayViews;
+        for (var i = 0; i < count; ++i)
+        {                              // i is the element index
+            for (var j = 0, n = fields.length; j < n; ++j)
+            {                          // j is the field index
+                var fr = fields[j];    // select the element field record
+                var sa = arrays[j];    // select the source data array
+                var o  = offset[j];    // offset of the field in FLOATs, etc.
+                var dv = views [j];    // the view for the field
+                var vd = fr.dimension; // the vector dimension
+                var bi = i * vd;
+                for (var k = 0; k < vd; ++k)
+                    dv[o + k] = sa [bi  + k];
+                offset[j] += sizes[j]; // move to the next element
+            }
+        }
+        return   {
+            data : buffer,
+            view : resetBufferView(access)
+        };
+    }
+
+    /// @summary Creates an ArrayBufferView appropriate to the underlying data
+    /// type for the texture data. This view provides access to the data for a
+    /// single level of a mipmap chain.
+    /// @param data The Uint8Array view of the image data.
+    /// @param unitType A string value specifying the type of the smallest
+    /// addressable unit of image data, one of UNSIGNED_BYTE, UNSIGNED_SHORT,
+    /// UNSIGNED_SHORT_5_6_5, UNSIGNED_SHORT_5_5_5_1, UNSIGNED_SHORT_4_4_4_4,
+    /// HALF_FLOAT_OES, FLOAT, UNSIGNED_INT or UNSIGNED_INT_24_8_WEBGL.
+    /// @param levelOffset The byte offset of the start of the mip-level.
+    /// @param levelSize The size of the mip-level data, in bytes.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return A new instance of either Uint8Array, Uint16Array, Uint32Array
+    /// or Float32Array that can be used to access the raw data for the
+    /// mip-level. If the internal data type is invalid, null is returned.
+    function createImageView(data, unitType, levelOffset, levelSize, debug)
+    {
+        var GL     = WebGLConstants;
+        var offset = data.byteOffset + levelOffset;
+        var buffer = data.buffer;
+        var size   = levelSize;
+        var type   = GL[unitType];
+        var view   = null;
+
+        switch (type)
+        {
+            case GL.UNSIGNED_BYTE:
+                view = new Uint8Array(buffer, offset, size);
+                break;
+
+            case GL.UNSIGNED_SHORT:
+            case GL.UNSIGNED_SHORT_5_6_5:
+            case GL.UNSIGNED_SHORT_5_5_5_1:
+            case GL.UNSIGNED_SHORT_4_4_4_4:
+            case GL.HALF_FLOAT_OES:
+                view = new Uint16Array(buffer, offset,  size / 2);
+                break;
+
+            case GL.UNSIGNED_INT:
+            case GL.UNSIGNED_INT_24_8_WEBGL:
+                view = new Uint32Array(buffer, offset,  size / 4);
+                break;
+
+            case GL.FLOAT:
+                view = new Float32Array(buffer, offset, size / 4);
+                break;
+
+            default:
+                break;
+        }
+        return view;
+    }
+
+    /// @summary Determines the attributes to required to represent an image
+    /// with the specified properties, taking into account restrictions for
+    /// compressed and packed formats.
+    /// @param width The width of the image, in pixels.
+    /// @param height The height of the image, in pixels.
+    /// @param pixelFormat A string value specifying the pixel format. May be
+    /// one of ALPHA, LUMINANCE, LUMINANCE_ALPHA, RGB or RGBA. Optional
+    /// implementation-supported values are DEPTH_COMPONENT, DEPTH_STENCIL,
+    /// SRGB_EXT and SRGB_ALPHA_EXT.
+    /// @param pixelType A string value specifying the pixel type. May be one
+    /// of UNSIGNED_BYTE, UNSIGNED_SHORT, UNSIGNED_INT, FLOAT, HALF_FLOAT_OES,
+    /// UNSIGNED_SHORT_5_5_5_1, UNSIGNED_SHORT_4_4_4_4, UNSIGNED_SHORT_5_6_5,
+    /// UNSIGNED_INT_24_8_WEBGL, or a compressed type.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return An object specifying the image storage attributes.
+    /// obj.width The width of the image, in pixels.
+    /// obj.height The height of the image, in pixels.
+    /// obj.byteSize The number of bytes required to store the image data.
+    function imageStorageAttributes(width, height, pixelFormat, pixelType, debug)
+    {
+        var GL     = WebGLConstants;
+        var format = GL[pixelFormat];
+        var type   = GL[pixelType];
+        var count  = 0;
+        var size   = 0;
+
+        // figure out how many components there are in a logical pixel.
+        switch (format)
+        {
+            case GL.DEPTH_COMPONENT:
+            case GL.ALPHA:
+            case GL.LUMINANCE:
+                count = 1;
+                break;
+            case GL.DEPTH_STENCIL:
+            case GL.LUMINANCE_ALPHA:
+                count = 2;
+                break;
+            case GL.RGB:
+            case GL.SRGB_EXT:
+                count = 3;
+                break;
+            case GL.RGBA:
+            case GL.SRGB_ALPHA_EXT:
+                count = 4;
+                break;
+        }
+
+        // now adjust dimensions and compute total sized based on storage type.
+        switch (type)
+        {
+            case GL.UNSIGNED_BYTE:
+                size = width * height * count;
+                break;
+            case GL.UNSIGNED_SHORT:
+            case GL.HALF_FLOAT_OES:
+                size = width * height * count * 2;
+                break;
+            case GL.UNSIGNED_INT:
+            case GL.FLOAT:
+                size = width * height * count * 4;
+                break;
+            case GL.UNSIGNED_SHORT_4_4_4_4:
+            case GL.UNSIGNED_SHORT_5_5_5_1:
+            case GL.UNSIGNED_SHORT_5_6_5:
+                size = width * height * 2;
+                break;
+            case GL.UNSIGNED_INT_24_8_WEBGL:
+                size = width * height * 4;
+                break;
+            case GL.COMPRESSED_RGB_ATC_WEBGL:
+            case GL.COMPRESSED_RGB_S3TC_DXT1_EXT:
+            case GL.COMPRESSED_RGBA_S3TC_DXT1_EXT:
+                width  = Math.floor((width  + 3) / 4);
+                height = Math.floor((height + 3) / 4);
+                size   =(width * height)    * 8;
+                break;
+            case GL.COMPRESSED_RGBA_S3TC_DXT3_EXT:
+            case GL.COMPRESSED_RGBA_S3TC_DXT5_EXT:
+            case GL.COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL:
+            case GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL:
+                width  = Math.floor((width  + 3) / 4);
+                height = Math.floor((height + 3) / 4);
+                size   =(width * height)    * 16;
+                break;
+            case GL.COMPRESSED_RGB_PVRTC_2BPPV1_IMG:
+            case GL.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG:
+                width  = Math.max(width,   16);
+                height = Math.max(height,   8);
+                size   =(width  * height) / 4;
+                break;
+            case GL.COMPRESSED_RGB_PVRTC_4BPPV1_IMG:
+            case GL.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
+                width  = Math.max(width,    8);
+                height = Math.max(height,   8);
+                size   =(width  * height) / 2;
+                break;
+        }
+        return {
+            width    : width,
+            height   : height,
+            byteSize : size
+        };
+    }
+
+    /// @summary Computes the number of levels in the mip-chain for a given
+    /// set of image dimensions.
+    /// @param width The width of the highest-resolution image, in pixels.
+    /// @param height The height of the highest-resolution image, in pixels.
+    /// @param slices The number of slices (depth) of the base level image.
+    /// @return The number of levels in the mip-pyramid.
+    function mipLevelCount(width, height, slices)
+    {
+        if (width  < 1) width  = 1;
+        if (height < 1) height = 1;
+        if (slices < 1) slices = 1;
+
+        var levelCount     = 0;
+        var majorDimension = 0;
+
+        // select the largest of (width, height, slices):
+        majorDimension = (width  > height)         ? width  : height;
+        majorDimension = (slices > majorDimension) ? slices : majorDimension;
+
+        // compute levels down to 1 in the major dimension.
+        while (majorDimension > 0)
+        {
+            majorDimension  >>= 1;
+            levelCount++;
+        }
+        return levelCount;
+    }
+
+    /// @summary Computes the value of a dimension (width, height or slice) of
+    /// an image given the value of the corresponding dimension in the highest-
+    /// resolution level of the image and the index of the target mip-level.
+    /// @param baseDimension The width, height or number of slices in the
+    /// highest-resolution (base) level of the image.
+    /// @param levelIndex The zero-based index of the mip-level, with level
+    /// zero representing the level with the highest resolution.
+    /// @return The width, height or slice count in the specified mip-level.
+    function mipLevelDimension(baseDimension, levelIndex)
+    {
+        var levelDimension = baseDimension >> levelIndex;
+        return (levelDimension <= 0) ? 1 : levelDimension;
+    }
+
+    /// @summary Inspects vertex and fragment shader source code to extract the
+    /// names and types of all uniform values.
+    /// @param vss A string specifying the vertex shader source code.
+    /// @param fss A string specifying the fragment shader source code.
+    /// @return An object specifying information about the names and types of
+    /// each uniform value in the shader program.
+    /// obj.names An array of string uniform names.
+    /// obj.types A table mapping uniform name to its GLSL type enum.
+    function reflectUniforms(vss, fss)
+    {
+        if (WebGLShaderDataTypesInit)
+        {
+            initGLSLTable();
+        }
+
+        var Types = WebGLShaderDataTypes;
+        var match = /uniform\s+(\w+)\s+(\w+)\s*;/g
+        var vert  = vss.match(match);
+        var frag  = fss.match(match);
+        var names = [];
+        var types = {};
+        if (vert)
+        {
+            for (var i = 0; i < vert.length; ++i)
+            {
+                var uniform = vert[i].split(match);
+                var type    = uniform[1];
+                var name    = uniform[2];
+                types[name] = Types[type];
+                names.push(name);
+            }
+        }
+        if (frag)
+        {
+            for (var i = 0; i < frag.length; ++i)
+            {
+                var uniform = frag[i].split(match);
+                var type    = uniform[1];
+                var name    = uniform[2];
+                types[name] = Types[type];
+                names.push(name);
+            }
+        }
+        return {
+            names : names,
+            types : types
+        };
+    }
+
+    /// @summary Inspects vertex shader source code to extract the names and
+    /// types of all vertex attributes.
+    /// @param vss A string specifying the vertex shader source code.
+    /// @return An object specifying information about the names and types of
+    /// each vertex attribute in the shader program.
+    /// obj.names An array of string vertex attribute names.
+    /// obj.types A table mapping attribute name to its GLSL type enum.
+    function reflectAttributes(vss)
+    {
+        if (WebGLShaderDataTypesInit)
+        {
+            initGLSLTable();
+        }
+
+        var Types = WebGLShaderDataTypes;
+        var match = /attribute\s+(\w+)\s+(\w+)\s*;/g
+        var vert  = vss.match(match);
+        var names = [];
+        var types = {};
+        if (vert)
+        {
+            for (var i = 0; i < vert.length; ++i)
+            {
+                var attrib  = vert[i].split(match);
+                var type    = attrib[1];
+                var name    = attrib[2];
+                types[name] = Types[type];
+                names.push(name);
+            }
+        }
+        return {
+            names : names,
+            types : types
+        };
+    }
+
+    /// @summary Constructor function for a type representing a WebGL shader
+    /// program object, with attached vertex and fragment shaders.
+    /// @return A reference to the new Program instance.
+    var Program = function ()
+    {
+        if (!(this instanceof Program))
+            return new Program();
+
+        this.type               = ResourceType.SHADER_PROGRAM;
+        this.subType            = ResourceSubType.GRAPHICS_SHADER;
+        this.isBacked           = false;
+        this.program            = null;
+        this.vertexShader       = null;
+        this.fragmentShader     = null;
+        this.vertexShaderCode   = '';
+        this.fragmentShaderCode = '';
+        this.uniformNames       = [];
+        this.uniformTypes       = {};
+        this.uniformLocations   = {};
+        this.attributeNames     = [];
+        this.attributeTypes     = {};
+        this.attributeIndices   = {};
+        this.boundTextureCount  = 0;
+        return this;
+    };
+
+    /// @summary Serializes the current contents of the instance into an object
+    /// that can be passed to Program.specifyAttributes() to restore state.
+    /// @return An object with the same fields expected on the args argument of
+    /// the Program.specifyAttributes() function.
+    Program.prototype.serialize = function ()
+    {
+        return {
+            vertexShader   : this.vertexShaderCode,
+            fragmentShader : this.fragmentShaderCode
+        };
+    };
+
+    /// @summary Specifies the creation attributes of the shader program.
+    /// @param args An object specifying creation attributes for the resource.
+    /// @param args.vertexShader The vertex shader source code.
+    /// @param args.fragmentShader The fragment shader source code.
+    /// @return The Program.
+    Program.prototype.specifyAttributes = function (args)
+    {
+        // ensure that all required arguments are specified.
+        args                = args || {};
+        args.vertexShader   = args.vertexShader   || '';
+        args.fragmentShader = args.fragmentShader || '';
+
+        // now cache everything on the Program instance.
+        this.vertexShaderCode   = args.vertexShader;
+        this.fragmentShaderCode = args.fragmentShader;
+        return this;
+    };
+
+    /// @summary Creates the backing WebGLProgram object by compiling both the
+    /// vertex and fragment shaders, linking them, and reflecting them.
+    /// @param gl The WebGLRenderingContext.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return true if the WebGL resources were created successfully.
+    Program.prototype.createBackingResources = function (gl, debug)
+    {
+        if (!this.isBacked)
+        {
+            var vss = this.vertexShaderCode;
+            var fss = this.fragmentShaderCode;
+            var vs  = gl.createShader(gl.VERTEX_SHADER);
+            var fs  = gl.createShader(gl.FRAGMENT_SHADER);
+
+            gl.shaderSource (vs, vss);
+            gl.compileShader(vs);
+            if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS) &&
+                !gl.isContextLost())
+            {
+                var log = gl.getShaderInfoLog(vs);
+                var src = vss;
+                gl.deleteShader(fs);
+                gl.deleteShader(vs);
+                if (debug)
+                {
+                    debug.emit('Program:createBackingResources', this, log, src);
+                }
+                return false;
+            }
+
+            gl.shaderSource (fs, fss);
+            gl.compileShader(fs);
+            if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS) &&
+                !gl.isContextLost())
+            {
+                var log = gl.getShaderInfoLog(fs);
+                var src = fss;
+                gl.deleteShader(fs);
+                gl.deleteShader(vs);
+                if (debug)
+                {
+                    debug.emit('Program:createBackingResources', this, log, src);
+                }
+                return false;
+            }
+
+            var program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
+
+            // the vertex attribute locations must be specified pre-linking.
+            var attrib  = reflectAttributes(vss);
+            var aNames  = attrib.names;
+            var aTypes  = attrib.types;
+            var aIndex  = {};
+            for (var i  = 0, n = aNames.length; i < n; ++i)
+            {
+                var name     = aNames[i];
+                aIndex[name] = i;
+                gl.bindAttribLocation(program, i, name);
+            }
+
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS) &&
+                !gl.isContextLost())
+            {
+                var log = gl.getProgramInfoLog(program);
+                var src = vss + '\n\n' +  fss;
+                gl.detachShader (program, fs);
+                gl.detachShader (program, vs);
+                gl.deleteProgram(program);
+                gl.deleteShader (fs);
+                gl.deleteShader (vs);
+                if (debug)
+                {
+                    debug.emit('Program:createBackingResources', this, log, src);
+                }
+                return false;
+            }
+
+            // the uniform binding locations must be retrieved post-linking.
+            var uniform = reflectUniforms(vss, fss);
+            var uNames  = uniform.names;
+            var uTypes  = uniform.types;
+            var uIndex  = {};
+            for (var i  = 0, n = uNames.length; i < n; ++i)
+            {
+                var name     = uNames[i];
+                uIndex[name] = gl.getUniformLocation(program, name);
+            }
+
+            this.program          = program;
+            this.vertexShader     = vs;
+            this.fragmentShader   = fs;
+            this.uniformNames     = uNames;
+            this.uniformTypes     = uTypes;
+            this.uniformLocations = uIndex;
+            this.attributeNames   = aNames;
+            this.attributeTypes   = aTypes;
+            this.attributeIndices = aIndex;
+            this.isBacked = true;
+        }
+        return this.isBacked;
+    };
+
+    /// @summary Destroys the backing WebGLProgram object.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The Program.
+    Program.prototype.deleteBackingResources = function (gl)
+    {
+        if (this.isBacked)
+        {
+            if (gl && !gl.isContextLost())
+            {
+                gl.detachShader (this.program, this.fragmentShader);
+                gl.detachShader (this.program, this.vertexShader);
+                gl.deleteShader (this.fragmentShader);
+                gl.deleteShader (this.vertexShader);
+                gl.deleteProgram(this.program);
+            }
+            this.fragmentShader = null;
+            this.vertexShader   = null;
+            this.program        = null;
+            this.isBacked       = false;
+        }
+        return this;
+    };
+
+    /// @summary Constructor function for a type representing a WebGL data
+    /// buffer resource, which can be used to store vertex, index or other
+    /// generic data for use on the GPU.
+    /// @return A reference to the new Buffer instance.
+    var Buffer = function ()
+    {
+        if (!(this instanceof Buffer))
+            return new Buffer();
+
+        this.type         = ResourceType.DATA_BUFFER;
+        this.subType      = ResourceSubType.UNKNOWN;
+        this.isBacked     = false;
+        this.buffer       = null;
+        this.usage        = '';
+        this.bindQuery    = 0;
+        this.bindTarget   = 0;
+        this.updateType   = 0;
+        this.totalSize    = 0;
+        this.elementSize  = 0;
+        this.elementCount = 0;
+        return this;
+    };
+
+    /// @summary Serializes the current contents of the instance into an object
+    /// that can be passed to Buffer.specifyAttributes() to restore state.
+    /// @return An object with the same fields expected on the args argument of
+    /// the Buffer.specifyAttributes() function.
+    Buffer.prototype.serialize = function ()
+    {
+        return {
+            usage        : subtype(this.subType),
+            updateType   : this.usage,
+            elementSize  : this.elementSize,
+            elementCount : this.elementCount
+        };
+    };
+
+    /// @summary Specifies the creation attributes of the data buffer.
+    /// @param args An object specifying creation attributes for the resource.
+    /// @param args.usage A string value specifying the buffer usage, one of
+    /// VERTEX_BUFFER, INDEX_BUFFER, ELEMENT_BUFFER, UNIFORM_BUFFER or 
+    /// GENERIC_BUFFER. The default is GENERIC_BUFFER.
+    /// @param args.updateType A string value specifying how often the buffer
+    /// will be updated, one of STATIC_DRAW, STREAM_DRAW or DYNAMIC_DRAW. The
+    /// default is STREAM_DRAW.
+    /// @param args.elementSize The size of a single logical element, in bytes.
+    /// @param args.elementCount The total number of logical elements the
+    /// buffer can hold (ie. the number of vertices or indices.)
+    /// @return true if the creation attributes were validated and stored.
+    Buffer.prototype.specifyAttributes = function (args)
+    {
+        var def = function (value, default_value)
+            {
+                if (value !== undefined)
+                    return value;
+                else
+                    return default_value;
+            };
+
+        // ensure that all required arguments are specified.
+        args              = args || {};
+        args.usage        = def(args.usage, 'GENERIC_BUFFER');
+        args.updateType   = def(args.updateType, 'STREAM_DRAW');
+        args.elementSize  = def(args.elementSize, 1);
+        args.elementCount = def(args.elementCount, 0);
+        if (args.elementSize  < 1) args.elementSize  = 1;
+        if (args.elementCount < 0) args.elementCount = 0;
+
+        // now cache everything on the Buffer instance.
+        this.subType      = ResourceSubType[args.usage];
+        this.usage        = args.updateType;
+        this.elementSize  = args.elementSize;
+        this.elementCount = args.elementCount;
+        this.totalSize    = args.elementSize * args.elementCount;
+        return true;
+    };
+
+    /// @summary Creates the backing WebGLBuffer object.
+    /// @param gl The WebGLRenderingContext.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return true if the WebGL resources were created successfully.
+    Buffer.prototype.createBackingResources = function (gl, debug)
+    {
+        if (!this.isBacked)
+        {
+            var bindQuery  = 0;
+            var bindTarget = 0;
+            var updateType = gl[this.usage];
+
+            switch (this.subType)
+            {
+                case ResourceSubType.VERTEX_BUFFER:
+                case ResourceSubType.UNIFORM_BUFFER:
+                case ResourceSubType.GENERIC_BUFFER:
+                    bindQuery  = gl.ARRAY_BUFFER_BINDING;
+                    bindTarget = gl.ARRAY_BUFFER;
+                    break;
+
+                case ResourceSubType.ELEMENT_BUFFER:
+                    bindQuery  = gl.ELEMENT_ARRAY_BUFFER_BINDING;
+                    bindTarget = gl.ELEMENT_ARRAY_BUFFER;
+                    break;
+            }
+
+            var  active   = gl.getParameter(bindQuery);
+            var  buffer   = gl.createBuffer();
+            if (!buffer)  return false;
+            gl.bindBuffer(bindTarget, buffer);
+            gl.bufferData(bindTarget, this.totalSize, updateType)
+            gl.bindBuffer(bindTarget, active);
+
+            this.buffer     = buffer;
+            this.bindQuery  = bindQuery;
+            this.bindTarget = bindTarget;
+            this.updateType = updateType;
+            this.isBacked   = true;
+        }
+        return this.isBacked;
+    };
+
+    /// @summary Destroys the backing WebGLBuffer object.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The Buffer.
+    Buffer.prototype.deleteBackingResources = function (gl)
+    {
+        if (this.isBacked)
+        {
+            if (gl && !gl.isContextLost())
+            {
+                gl.deleteBuffer(this.buffer);
+            }
+            this.buffer   = null;
+            this.isBacked = false;
+        }
+        return this;
+    };
+
+    /// @summary Uploads data into the buffer. The entire buffer is replaced.
+    /// @param gl The WebGLRenderingContext.
+    /// @param data An ArrayBuffer or ArrayBufferView specifying the data to
+    /// upload. The entire view is uploaded to the buffer.
+    /// @return The Buffer.
+    Buffer.prototype.upload = function (gl, data)
+    {
+        gl.bindBuffer(this.bindTarget, this.buffer);
+        gl.bufferData(this.bindTarget, data, this.updateType);
+        return this;
+    };
+
+    /// @summary Uploads data into a region of the buffer.
+    /// @param gl The WebGLRenderingContext.
+    /// @param byteOffset The byte offset of the start of the region to update.
+    /// @param data An ArrayBuffer or ArrayBufferView specifying the data to
+    /// upload. The entire view is uploaded to the buffer region.
+    /// @return The Buffer.
+    Buffer.prototype.uploadRegion = function (gl, byteOffset, data)
+    {
+        gl.bindBuffer(this.bindTarget, this.buffer);
+        gl.bufferSubData(this.bindTarget, byteOffset, data);
+        return this;
+    };
+
+    /// @summary Constructor function for a type representing a WebGL texture
+    /// resource, which can be used as a sampler source.
+    /// @return A reference to the new Texture instance.
+    var Texture = function ()
+    {
+        if (!(this instanceof Texture))
+            return new Texture();
+
+        this.type          = ResourceType.TEXTURE;
+        this.subType       = ResourceSubType.UNKNOWN;
+        this.isBacked      = false;
+        this.hasMipmaps    = false;
+        this.texture       = null;
+        this.levels        = [];
+        this.target        = '';
+        this.format        = '';
+        this.dataType      = '';
+        this.userType      = '';
+        this.wrapModeS     = '';
+        this.wrapModeT     = '';
+        this.magnifyFilter = '';
+        this.minifyFilter  = '';
+        this.bindQuery     = 0;
+        this.bindTarget    = 0;
+        this.textureTarget = 0;
+        return this;
+    };
+
+    /// @summary Serializes the current contents of the instance into an object
+    /// that can be passed to Texture.specifyAttributes() to restore state.
+    /// @return An object with the same fields expected on the args argument of
+    /// the Texture.specifyAttributes() function.
+    Texture.prototype.serialize = function ()
+    {
+        return {
+            type       : this.userType,
+            usage      : subtype(this.subType),
+            target     : this.target,
+            format     : this.format,
+            dataType   : this.dataType,
+            wrapS      : this.wrapModeS,
+            wrapT      : this.wrapModeT,
+            magFilter  : this.magnifyFilter,
+            minFilter  : this.minifyFilter,
+            compressed : this.isCompressed,
+            hasMipmaps : this.hasMipmaps,
+            levels     : this.levels.slice(0)
+        };
+    };
+
+    /// @summary Specifies the creation attributes of the texture.
+    /// @param args An object specifying creation attributes for the resource.
+    /// @param args.type A string value specifying a user-defined texture type
+    /// attribute. This typically describes the usage of the texture, for
+    /// example, 'COLOR' for a texture containing color data, 'NORMAL' for a
+    /// normal map texture, and so on.
+    /// @param args.usage A string value specifying the texture usage, one of:
+    /// TEXTURE_2D, TEXTURE_CUBE or TEXTURE_DEPTH. The default is TEXTURE_2D.
+    /// @param args.target A string value specifying the texture target, one of:
+    /// TEXTURE_2D, TEXTURE_CUBE_MAP_POSITIVE_[X,Y,Z] or
+    /// TEXTURE_CUBE_MAP_NEGATIVE_[X,Y,Z]. The default is TEXTURE_2D.
+    /// @param args.format A string value specifying the texture type. May be
+    /// one of ALPHA, LUMINANCE, LUMINANCE_ALPHA, RGB or RGBA. Optional
+    /// implementation-supported values are DEPTH_COMPONENT, DEPTH_STENCIL,
+    /// SRGB_EXT, SRGB_ALPHA_EXT or any of the compressed texture formats. The
+    /// default is RGBA.
+    /// @param args.dataType A string value specifying the internal data type.
+    /// One of UNSIGNED_BYTE, UNSIGNED_SHORT_5_6_5 or UNSIGNED_SHORT_5_5_5_1.
+    /// Optional implementation-supported values are UNSIGNED_SHORT,
+    /// UNSIGNED_INT, FLOAT, HALF_FLOAT_OES and UNSIGNED_INT_24_8_WEBGL. For
+    /// compressed texture formats, specify UNSIGNED_BYTE or leave undefined.
+    /// The default is UNSIGNED_BYTE.
+    /// @param args.wrapS A string value specifying the wrapping mode to use in
+    /// the horizontal direction. This value may be one of REPEAT, CLAMP_TO_EDGE
+    /// or MIRRORED_REPEAT. The default is CLAMP_TO_EDGE.
+    /// @param args.wrapT A string value specifying the wrapping mode to use in
+    /// the vertical direction. Supports the same values as @a args.wrapS.
+    /// @param args.magFilter A string value specifying the filter to use when
+    /// the image is magnified. One of NEAREST or LINEAR. Default is NEAREST.
+    /// @param args.minFilter A string value specifying the filter to use when
+    /// the image is minified. One of NEAREST or LINEAR. If a mipmap chain
+    /// is attached, one of NEAREST_MIPMAP_NEAREST, LINEAR_MIPMAP_NEAREST,
+    /// NEAREST_MIPMAP_LINEAR or LINEAR_MIPMAP_LINEAR. Default is NEAREST.
+    /// @param args.compressed Specify true to indicate that the texture data
+    /// is stored compressed on the GPU.
+    /// @param args.hasMipmaps Specify true to indicate that the texture object
+    /// has an attached mipmap chain.
+    /// @param args.levels An array of objects describing each level in the
+    /// mipmap chain. Level 0 represents the highest-resolution image. Each
+    /// level object has width, height, byteSize and byteOffset attributes.
+    /// This array must have at least one element, even if @a args.hasMipmaps
+    /// is false, to describe the image dimensions.
+    /// @return true if the creation attributes were validated and stored.
+    Texture.prototype.specifyAttributes = function (args)
+    {
+        var def = function (value, default_value)
+            {
+                if (value !== undefined)
+                    return value;
+                else
+                    return default_value;
+            };
+
+        // ensure that all required arguments are specified.
+        args               = args || {};
+        args.type          = def(args.type, '');
+        args.usage         = def(args.usage, 'TEXTURE_2D');
+        args.target        = def(args.target, 'TEXTURE_2D');
+        args.format        = def(args.format, 'RGBA');
+        args.dataType      = def(args.dataType, 'UNSIGNED_BYTE');
+        args.wrapS         = def(args.wrapS, 'CLAMP_TO_EDGE');
+        args.wrapT         = def(args.wrapT, 'CLAMP_TO_EDGE');
+        args.magFilter     = def(args.magFilter, 'NEAREST');
+        args.minFilter     = def(args.minFilter, 'NEAREST');
+        args.compressed    = def(args.compressed, false);
+        args.hasMipmaps    = def(args.hasMipmaps, false);
+        args.levels        = def(args.levels, []);
+
+        // now cache everything on the Texture instance.
+        this.subType       = ResourceSubType[args.usage];
+        this.isCompressed  = args.compressed;
+        this.hasMipmaps    = args.hasMipmaps;
+        this.target        = args.target;
+        this.format        = args.format;
+        this.dataType      = args.dataType;
+        this.userType      = args.type;
+        this.wrapModeS     = args.wrapS;
+        this.wrapModeT     = args.wrapT;
+        this.magnifyFilter = args.magFilter;
+        this.minifyFilter  = args.minFilter;
+        for (var i = 0,  n = args.levels.length; i < n; ++i)
+        {
+            this.levels[i] = {
+                width      : args.levels[i].width,
+                height     : args.levels[i].height,
+                byteSize   : args.levels[i].byteSize,
+                byteOffset : args.levels[i].byteOffset
+            };
+        }
+        return true;
+    };
+
+    /// @summary Creates the backing WebGLTexture object.
+    /// @param gl The WebGLRenderingContext.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return true if the WebGL resources were created successfully.
+    Texture.prototype.createBackingResources = function (gl, debug)
+    {
+        if (!this.isBacked)
+        {
+            var bindQuery    = gl.TEXTURE_BINDING_2D;
+            var textTarget   = gl[this.target];
+            var bindTarget   = gl[this.target];
+
+            if (bindTarget === gl.TEXTURE_CUBE_MAP_POSITIVE_X ||
+                bindTarget === gl.TEXTURE_CUBE_MAP_POSITIVE_Y ||
+                bindTarget === gl.TEXTURE_CUBE_MAP_POSITIVE_Z ||
+                bindTarget === gl.TEXTURE_CUBE_MAP_NEGATIVE_X ||
+                bindTarget === gl.TEXTURE_CUBE_MAP_NEGATIVE_Y ||
+                bindTarget === gl.TEXTURE_CUBE_MAP_NEGATIVE_Z)
+            {
+                bindTarget   = gl.TEXTURE_CUBE_MAP;
+                bindQuery    = gl.TEXTURE_BINDING_CUBE_MAP;
+            }
+
+            var  active      = gl.getParameter(bindQuery);
+            var  texture     = gl.createTexture();
+            if (!texture)    return false;
+            gl.bindTexture  (bindTarget, texture);
+            gl.texParameteri(bindTarget, gl.TEXTURE_WRAP_S,     gl[this.wrapModeS]);
+            gl.texParameteri(bindTarget, gl.TEXTURE_WRAP_T,     gl[this.wrapModeT]);
+            gl.texParameteri(bindTarget, gl.TEXTURE_MIN_FILTER, gl[this.minifyFilter]);
+            gl.texParameteri(bindTarget, gl.TEXTURE_MAG_FILTER, gl[this.magnifyFilter]);
+            gl.bindTexture  (bindTarget, active);
+
+            this.texture       = texture;
+            this.textureTarget = textTarget;
+            this.bindTarget    = bindTarget;
+            this.bindQuery     = bindQuery;
+            this.isBacked      = true;
+        }
+        return this.isBacked;
+    };
+
+    /// @summary Destroys the backing WebGLTexture object.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The Texture.
+    Texture.prototype.deleteBackingResources = function (gl)
+    {
+        if (this.isBacked)
+        {
+            if (gl && !gl.isContextLost())
+            {
+                gl.deleteTexture(this.texture);
+            }
+            this.texture  = null;
+            this.isBacked = false;
+        }
+        return this;
+    };
+
+    /// @summary Uploads the complete mipmap chain for a texture to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param data A Uint8Array view storing the raw data for each mip-level.
+    /// @return The Texture.
+    Texture.prototype.upload = function (gl, data)
+    {
+        var active = gl.getParameter(this.bindQuery);
+        var target = this.textureTarget;
+        var bind   = this.bindTarget;
+        var type   = gl[this.dataType];
+        var format = gl[this.format];
+
+        gl.bindTexture(bind, this.texture);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        for (var i   = 0, n = this.levels.length; i < n; ++i)
+        {
+            var ld   = this.levels[i];
+            var lw   = ld.width;
+            var lh   = ld.height;
+            var view = createImageView(data, this.dataType, ld.byteOffset, ld.byteSize);
+            if (this.isCompressed)
+            {
+                gl.compressedTexImage2D(target, i, format, lw, lh, 0, view);
+            }
+            else
+            {
+                gl.texImage2D(target, i, format, lw, lh, 0, format, type, view);
+            }
+        }
+
+        gl.bindTexture(bind, active);
+        return this;
+    };
+
+    /// @summary Uploads image data to a sub-region of the texture.
+    /// @param gl The WebGLRenderingContext.
+    /// @param x The x-coordinate of the upper-left corner on the texture.
+    /// @param y The y-coordinate of the upper-left corner on the texture.
+    /// @param level The zero-based index of the target level in the mip-chain.
+    /// @param srcData A Uint8Array view storing the raw image data.
+    /// @param srcDesc An object describing the source data, with fields:
+    /// @param srcDesc.width The width of the source image, in pixels.
+    /// @param srcDesc.height The height of the source image, in pixels.
+    /// @param srcDesc.byteSize The size of the source image, in bytes.
+    /// @param srcDesc.byteOffset The byte offset of the source data within a
+    /// larger buffer, if applicable; otherwise, 0.
+    /// @return The Texture.
+    Texture.prototype.uploadRegion = function (gl, x, y, level, srcData, srcDesc)
+    {
+        var active = gl.getParameter(this.bindQuery);
+        var target = this.textureTarget;
+        var bind   = this.bindTarget;
+        var type   = gl[this.dataType];
+        var format = gl[this.format];
+        var lw     = srcDesc.width;
+        var lh     = srcDesc.height;
+        var offset = srcDesc.byteOffset;
+        var size   = srcDesc.byteSize;
+        var view   = createImageView(srcData, this.dataType, offset, size);
+
+        gl.bindTexture(bind, this.texture);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        if (this.isCompressed)
+        {
+            gl.compressedTexSubImage2D(target, level, x, y, lw, lh, format, view);
+        }
+        else
+        {
+            gl.texSubImage2D(target, level, x, y, lw, lh, format, type, view);
+        }
+        gl.bindTexture(bind, active);
+        return this;
+    };
+
+    /// @summary Uploads data to a texture object from a DOM Canvas, Image or
+    /// Video element. If the texture has an associated mip-chain, it is
+    /// updated using WebGLRenderingContext.generateMipmap().
+    /// @param gl The WebGLRenderingContext.
+    /// @param domElement An instance of HTMLImageElement, HTMLCanvasElement or
+    /// HTMLVideoElement specifying the source texture data.
+    /// @return The Texture.
+    Texture.prototype.uploadFromDOM = function (gl, domElement)
+    {
+        if (this.isCompressed)
+            return this;
+
+        var active = gl.getParameter(this.bindQuery);
+        var target = this.textureTarget;
+        var bind   = this.bindTarget;
+        var type   = gl[this.dataType];
+        var format = gl[this.format];
+
+        gl.bindTexture(bind, this.texture);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        gl.texImage2D (target, 0, format, format, type, domElement);
+        if (this.hasMipmaps) gl.generateMipmap(target);
+        gl.bindTexture(bind, active);
+        return this;
+    };
+
+    /// @summary Constructor function for a type representing a WebGL
+    /// renderbuffer resource, which represents a part of a render target.
+    /// @return A reference to the new Renderbuffer instance.
+    var Renderbuffer = function ()
+    {
+        if (!(this instanceof Renderbuffer))
+            return new Renderbuffer();
+
+        this.type         = ResourceType.RENDER_BUFFER;
+        this.subType      = ResourceSubType.UNKNOWN;
+        this.isBacked     = false;
+        this.renderbuffer = null;
+        this.format       = '';
+        this.width        = 0;
+        this.height       = 0;
+        return this;
+    };
+
+    /// @summary Serializes the current contents of the instance into an object
+    /// that can be passed to Renderbuffer.specifyAttributes() to restore state.
+    /// @return An object with the same fields expected on the args argument of
+    /// the Renderbuffer.specifyAttributes() function.
+    Renderbuffer.prototype.serialize = function ()
+    {
+        return {
+            width  : this.width,
+            height : this.height,
+            format : this.format,
+            usage  : subtype(this.subType)
+        };
+    };
+
+    /// @summary Specifies the creation attributes of the renderbuffer.
+    /// @param args An object specifying creation attributes for the resource.
+    /// @param args.width The width of the renderbuffer, in pixels.
+    /// @param args.height The height of the renderbuffer, in pixels.
+    /// @param args.format A string specifying the renderbuffer format. The
+    /// string may be one of RGBA4, RGB565, RGB5_A1, DEPTH_STENCIL,
+    /// STENCIL_INDEX8, and DEPTH_COMPONENT16. Optional implementation-
+    /// supported values are RGB16F_EXT, RGBA16F_EXT, RGB32F_EXT, RGBA32F_EXT
+    /// and SRGB_ALPHA8_EXT. The default value is DEPTH_COMPONENT16.
+    /// @param args.usage A string specifying the renderbuffer usage. May be
+    /// PIXEL_BUFFER, DEPTH_BUFFER, STENCIL_BUFFER or DEPTH_STENCIL_BUFFER. The
+    /// default value is DEPTH_BUFFER.
+    /// @return true if the creation attributes were validated and stored.
+    Renderbuffer.prototype.specifyAttributes = function (args)
+    {
+        var def = function (value, default_value)
+            {
+                if (value !== undefined)
+                    return value;
+                else
+                    return default_value;
+            };
+
+        // ensure that all required arguments are specified.
+        args         = args || {};
+        args.width   = def(args.width , 1);
+        args.height  = def(args.height, 1);
+        args.format  = def(args.format, 'DEPTH_COMPONENT16');
+        args.usage   = def(args.usage,  'DEPTH_BUFFER');
+
+        // ensure that the width and height are both valid.
+        if (args.width  < 1) args.width  = 1;
+        if (args.height < 1) args.height = 1;
+
+        // now cache everything on the renderbuffer instance.
+        this.subType = ResourceSubType[args.usage];
+        this.format  = args.format;
+        this.width   = args.width;
+        this.height  = args.height;
+        return true;
+    };
+
+    /// @summary Creates the backing WebGLRenderbuffer object.
+    /// @param gl The WebGLRenderingContext.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return true if the WebGL resources were created successfully.
+    Renderbuffer.prototype.createBackingResources = function (gl, debug)
+    {
+        if (!this.isBacked)
+        {
+            var  GL     = WebGLConstants;
+            var  width  = this.width;
+            var  height = this.height;
+            var  format = GL[this.format];
+            var  target = gl.RENDERBUFFER;
+            var  active = gl.getParameter(gl.RENDERBUFFER_BINDING);
+            var  buffer = gl.createRenderbuffer();
+            if (!buffer)  return false;
+            gl.bindRenderbuffer(target, buffer);
+            gl.renderbufferStorage(target, format, width, height);
+            gl.bindRenderbuffer(target, active);
+            this.renderbuffer = buffer;
+            this.isBacked     = true;
+        }
+        return this.isBacked;
+    };
+
+    /// @summary Destroys the backing WebGLRenderbuffer object.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The Renderbuffer.
+    Renderbuffer.prototype.deleteBackingResources = function (gl)
+    {
+        if (this.isBacked)
+        {
+            if (gl && !gl.isContextLost())
+            {
+                gl.deleteRenderbuffer(this.renderbuffer);
+            }
+            this.renderbuffer = null;
+            this.isBacked     = false;
+        }
+        return this;
+    };
+
+    /// @summary Constructor function for a type representing a WebGL
+    /// framebuffer resource (a render target).
+    /// @return A reference to the new Framebuffer instance.
+    var Framebuffer = function ()
+    {
+        if (!(this instanceof Framebuffer))
+            return new Framebuffer();
+
+        this.type          = ResourceType.FRAME_BUFFER;
+        this.subType       = ResourceSubType.RENDER_TARGET;
+        this.isBacked      = false;
+        this.framebuffer   = null;
+        this.depthBuffer   = null;
+        this.stencilBuffer = null;
+        this.colorBuffers  = new Array(16);
+        this.drawBuffers   = [];
+        this.width         = 0;
+        this.height        = 0;
+        return this;
+    };
+
+    /// @summary Serializes the current contents of the instance into an object
+    /// that can be passed to Framebuffer.specifyAttributes() to restore state.
+    /// @return An object with the same fields expected on the args argument of
+    /// the Framebuffer.specifyAttributes() function.
+    Framebuffer.prototype.serialize = function ()
+    {
+        return {
+            width  : this.width,
+            height : this.height
+        };
+    };
+
+    /// @summary Specifies the creation attributes of the framebuffer.
+    /// @param args An object specifying creation attributes for the resource.
+    /// @param args.width The width of the framebuffer, in pixels.
+    /// @param args.height The height of the framebuffer, in pixels.
+    /// @return true if the creation attributes were validated and stored.
+    Framebuffer.prototype.specifyAttributes = function (args)
+    {
+        var def = function (value, default_value)
+            {
+                if (value !== undefined)
+                    return value;
+                else
+                    return default_value;
+            };
+
+        // ensure that all required arguments are specified.
+        args        = args || {};
+        args.width  = def(args.width , 1);
+        args.height = def(args.height, 1);
+
+        // ensure that the width and height are both valid.
+        if (args.width  < 1) args.width  = 1;
+        if (args.height < 1) args.height = 1;
+
+        // now cache everything on the framebuffer instance.
+        this.width  = args.width;
+        this.height = args.height;
+        return true;
+    };
+
+    /// @summary Creates the backing WebGLFramebuffer object.
+    /// @param gl The WebGLRenderingContext.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return true if the WebGL resources were created successfully.
+    Framebuffer.prototype.createBackingResources = function (gl, debug)
+    {
+        if (!this.isBacked)
+        {
+            var  buffer = gl.createFramebuffer();
+            if (!buffer)  return false;
+            this.framebuffer = buffer;
+            this.isBacked    = true;
+        }
+        return this.isBacked;
+    };
+
+    /// @summary Destroys the backing WebGLRenderbuffer object.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The Framebuffer.
+    Framebuffer.prototype.deleteBackingResources = function (gl)
+    {
+        if (this.isBacked)
+        {
+            if (gl && !gl.isContextLost())
+            {
+                this.detach(); // textures & renderbuffers
+                gl.deleteFramebuffer(this.framebuffer);
+            }
+            for (var i = 0,  n = this.colorBuffers.length; i < n; ++i)
+                this.colorBuffers[i]  = null;
+            this.stencilBuffer = null;
+            this.depthBuffer   = null;
+            this.framebuffer   = null;
+            this.drawBuffers   = [];
+            this.isBacked      = false;
+        }
+        return this;
+    };
+
+    /// @summary Attaches a texture (either a standard 2D texture or cube map)
+    /// to the color buffer attachment point associated with the framebuffer.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Texture to attach.
+    /// @param index The zero-based index of the color attachment point. If
+    /// unspecified, defaults to zero. Not all implementations support multiple
+    /// color attachment points.
+    /// @return The Framebuffer.
+    Framebuffer.prototype.attachColorTexture = function (gl, resource, index)
+    {
+        if (index === undefined)
+            index   = 0;
+        this.colorBuffers[index]  = resource;
+        if (gl.TEXTURE_CUBE_MAP === resource.bindTarget)
+        {
+            // a cube map needs to have all six faces attached.
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+            for (var i = 0; i < 6; ++i)
+            {
+                gl.framebufferTexture2D(
+                    gl.FRAMEBUFFER,
+                    gl.COLOR_ATTACHMENT0 + index,
+                    gl.TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                    resource.texture, 0);
+            }
+        }
+        else
+        {
+            // a standard 2D texture map.
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+            gl.framebufferTexture2D(
+                gl.FRAMEBUFFER,
+                gl.COLOR_ATTACHMENT0 + index,
+                resource.textureTarget,
+                resource.texture, 0);
+        }
+        this.drawBuffers.push(WebGLConstants.DRAW_BUFFER0_WEBGL + index);
+        return this;
+    };
+
+    /// @summary Attaches a renderbuffer to the color buffer attachment point.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Renderbuffer to attach.
+    /// @param index The zero-based index of the color attachment point. If
+    /// unspecified, defaults to zero. Not all implementations support multiple
+    /// color attachment points.
+    /// @return The Framebuffer.
+    Framebuffer.prototype.attachColorRenderbuffer = function (gl, resource, index)
+    {
+        if (index === undefined)
+            index   = 0;
+        this.colorBuffers[index] = resource;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        gl.framebufferRenderbuffer(
+            gl.FRAMEBUFFER,
+            gl.COLOR_ATTACHMENT0 + index,
+            gl.RENDERBUFFER,
+            resource.renderbuffer);
+        this.drawBuffers.push(WebGLConstants.DRAW_BUFFER0_WEBGL + index);
+        return this;
+    };
+
+    /// @summary Attaches a 2D texture to the depth buffer attachment point.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Texture to attach.
+    /// @return The Framebuffer.
+    Framebuffer.prototype.attachDepthTexture = function (gl, resource)
+    {
+        this.depthBuffer = resource;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        gl.framebufferTexture2D(
+            gl.FRAMEBUFFER,
+            gl.DEPTH_ATTACHMENT,
+            gl.TEXTURE_2D,
+            resource.texture, 0);
+        return this;
+    };
+
+    /// @summary Attaches a renderbuffer to the depth buffer attachment point.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Renderbuffer to attach.
+    /// @return The Framebuffer.
+    Framebuffer.prototype.attachDepthRenderbuffer = function (gl, resource)
+    {
+        this.depthBuffer = resource;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        gl.framebufferRenderbuffer(
+            gl.FRAMEBUFFER,
+            gl.DEPTH_ATTACHMENT,
+            gl.RENDERBUFFER,
+            resource.renderbuffer);
+        return this;
+    };
+
+    /// @summary Attaches a renderbuffer to the stencil buffer attachment point.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Renderbuffer to attach.
+    /// @return The Framebuffer.
+    Framebuffer.prototype.attachStencilRenderbuffer = function (gl, resource)
+    {
+        this.stencilBuffer = resource;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        gl.framebufferRenderbuffer(
+            gl.FRAMEBUFFER,
+            gl.STENCIL_ATTACHMENT,
+            gl.RENDERBUFFER,
+            resource.renderbuffer);
+        return this;
+    };
+
+    /// @summary Attaches a 2D texture to the DEPTH_STENCIL attachment point.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Texture to attach (type UNSIGNED_INT_24_8_WEBGL).
+    /// @return The Framebuffer.
+    Framebuffer.prototype.attachDepthStencilTexture = function (gl, resource)
+    {
+        this.depthBuffer   = resource;
+        this.stencilBuffer = resource;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        gl.framebufferTexture2D(
+            gl.FRAMEBUFFER,
+            gl.DEPTH_STENCIL_ATTACHMENT,
+            gl.TEXTURE_2D,
+            resource.texture, 0);
+        return this;
+    };
+
+    /// @summary Attaches a renderbuffer to the DEPTH_STENCIL attachment point.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Renderbuffer to attach.
+    /// @return The Framebuffer.
+    Framebuffer.prototype.attachDepthStencilRenderbuffer = function (gl, resource)
+    {
+        this.depthBuffer   = resource;
+        this.stencilBuffer = resource;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        gl.framebufferRenderbuffer(
+            gl.FRAMEBUFFER,
+            gl.DEPTH_STENCIL_ATTACHMENT,
+            gl.RENDERBUFFER,
+            resource.renderbuffer);
+        return this;
+    };
+
+    /// @summary Detaches resources from all assigned attachment points. This
+    /// function is called during Framebuffer.deleteBackingResources() prior
+    /// to deleting the WebGLFramebuffer object.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The Framebuffer.
+    Framebuffer.prototype.detach = function (gl)
+    {
+        var cleanup = function (attach, res)
+            {
+                if (res === null) return;
+                if (res.type ===  ResourceType.TEXTURE)
+                {
+                    if (res.bindTarget === gl.TEXTURE_CUBE_MAP)
+                    {
+                        for (var i = 0; i < 6; ++i)
+                        {
+                            gl.framebufferTexture2D(
+                                gl.FRAMEBUFFER, attach,
+                                gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, null, 0);
+                        }
+                    }
+                    else
+                    {
+                        gl.framebufferTexture2D(
+                            gl.FRAMEBUFFER, attach,
+                            gl.TEXTURE_2D, null, 0);
+                    }
+                }
+                if (res.type ===  ResourceType.RENDER_BUFFER)
+                {
+                    gl.framebufferRenderbuffer(
+                        gl.FRAMEBUFFER, attach,
+                        gl.RENDERBUFFER, null);
+                }
+            };
+
+        for (var i = 0,  n = this.colorBuffers.length; i < n; ++i)
+        {
+            cleanup(gl.COLOR_ATTACHMENT0 + i, this.colorBuffers[i]);
+            this.colorBuffers[i] = null;
+        }
+        if (this.depthBuffer || this.stencilBuffer)
+        {
+            if (this.depthBuffer === this.stencilBuffer)
+            {
+                // a single DEPTH_STENCIL attachment.
+                cleanup(gl.DEPTH_STENCIL_ATTACHMENT, this.depthBuffer);
+                this.depthBuffer   = null;
+                this.stencilBuffer = null;
+            }
+            else
+            {
+                // separate depth and stencil attachments.
+                cleanup(gl.DEPTH_ATTACHMENT,   this.depthBuffer);
+                cleanup(gl.STENCIL_ATTACHMENT, this.stencilBuffer);
+                this.depthBuffer   = null;
+                this.stencilBuffer = null;
+            }
+        }
+        this.drawBuffers.length = 0;
+        return this;
+    };
+
+    /// @summary Constructor function for a type storing values for all render
+    /// states associated with alpha blending.
+    /// @return A reference to the new BlendState instance.
+    var BlendState = function ()
+    {
+        if (!(this instanceof BlendState))
+            return new BlendState();
+
+        this.type              = ResourceType.STATE_OBJECT;
+        this.subType           = ResourceSubType.BLEND_STATE;
+        this.blendEnabled      = false;
+        this.constantColor     = [0.0, 0.0, 0.0, 0.0];
+        this.sourceFactorColor = WebGLConstants.ONE;
+        this.sourceFactorAlpha = WebGLConstants.ONE;
+        this.targetFactorColor = WebGLConstants.ZERO;
+        this.targetFactorAlpha = WebGLConstants.ZERO;
+        this.functionColor     = WebGLConstants.FUNC_ADD;
+        this.functionAlpha     = WebGLConstants.FUNC_ADD;
+        return this;
+    };
+
+    /// @summary Serializes the current contents of the instance into an object
+    /// that can be passed to BlendState.specifyAttributes() to restore state.
+    /// @return An object with the same fields expected on the args argument of
+    /// the BlendState.specifyAttributes() function.
+    BlendState.prototype.serialize = function ()
+    {
+        return {
+            blendEnabled      : this.blendEnabled,
+            constantColor     : this.constantColor.slice(0),
+            sourceFactorColor : enumraw(this.sourceFactorColor),
+            sourceFactorAlpha : enumraw(this.sourceFactorAlpha),
+            targetFactorColor : enumraw(this.targetFactorColor),
+            targetFactorAlpha : enumraw(this.targetFactorAlpha),
+            functionColor     : enumraw(this.functionColor),
+            functionAlpha     : enumraw(this.functionAlpha)
+        };
+    };
+
+    /// @summary Specifies the creation attributes of the blend state.
+    /// @param args An object specifying creation attributes for the resource.
+    /// @param args.blendEnabled Boolean value controlling whether alpha
+    /// blending is enabled.
+    /// @param args.constantColor An array of four floating point values
+    /// specifying the constant RGBA color used for blending and used when the
+    /// CONSTANT_COLOR, ONE_MINUS_CONSTANT_COLOR, ONE_MINUS_CONSTANT_ALPHA or
+    /// CONSTANT_ALPHA factors are specified.
+    /// @param args.sourceFactorColor A string value specifying the contribution
+    /// of the source RGB color. May be one of the values ZERO, ONE, SRC_COLOR,
+    /// ONE_MINUS_SRC_COLOR, DST_COLOR, ONE_MINUS_DST_COLOR, DST_ALPHA,
+    /// ONE_MINUS_DST_ALPHA, CONSTANT_COLOR, ONE_MINUS_CONSTANT_COLOR,
+    /// CONSTANT_ALPHA, ONE_MINUS_CONSTANT_ALPHA or SRC_ALPHA_SATURATE.
+    /// @param args.sourceFactorAlpha May be any of the values listed above.
+    /// @param args.targetFactorColor May be any of the values listed above
+    /// except for SRC_ALPHA_SATURATE.
+    /// @param args.targetFactorAlpha May be any of the values listed above
+    /// except for SRC_ALPHA_SATURATE.
+    /// @param args.functionColor The blending function for color channels. May
+    /// be one of FUNC_ADD, FUNC_SUBTRACT or FUNC_REVERSE_SUBTRACT.
+    /// @param args.functionAlpha The blending function for the alpha channel.
+    /// May be any of the values listed above.
+    /// @return true if the creation attributes were validated and stored.
+    BlendState.prototype.specifyAttributes = function (args)
+    {
+        var def = function (value, default_value)
+            {
+                if (value !== undefined)
+                    return value;
+                else
+                    return default_value;
+            };
+
+        // ensure that all required arguments are specified.
+        args = args || {};
+        args.blendEnabled      = def(args.blendEnabled, false);
+        args.constantColor     = def(args.constantColor, [0.0, 0.0, 0.0, 0.0]);
+        args.sourceFactorColor = def(args.sourceFactorColor, 'ONE');
+        args.sourceFactorAlpha = def(args.sourceFactorAlpha, 'ONE');
+        args.targetFactorColor = def(args.targetFactorColor, 'ZERO');
+        args.targetFactorAlpha = def(args.targetFactorAlpha, 'ZERO');
+        args.functionColor     = def(args.functionColor, 'FUNC_ADD');
+        args.functionAlpha     = def(args.functionAlpha, 'FUNC_ADD');
+
+        // convert string values to their corresponding enum value.
+        var GL = WebGLConstants;
+        this.blendEnabled      = args.blendEnabled;
+        this.constantColor     = args.constantColor;
+        this.sourceFactorColor = GL[args.sourceFactorColor];
+        this.sourceFactorAlpha = GL[args.sourceFactorAlpha];
+        this.targetFactorColor = GL[args.targetFactorColor];
+        this.targetFactorAlpha = GL[args.targetFactorAlpha];
+        this.functionColor     = GL[args.functionColor];
+        this.functionAlpha     = GL[args.functionAlpha];
+        return true;
+    };
+
+    /// @summary Creates any backing WebGL resources.
+    /// @param gl The WebGLRenderingContext.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return true if the WebGL resources were created successfully.
+    BlendState.prototype.createBackingResources = function (gl, debug)
+    {
+        return true; // nothing to do for this type
+    };
+
+    /// @summary Destroys any backing WebGL resources.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The BlendState.
+    BlendState.prototype.deleteBackingResources = function (gl)
+    {
+        return this; // nothing to do for this type
+    };
+
+    /// @summary Constructor function for a type storing values for all render
+    /// states associated with rasterization.
+    /// @return A reference to the new RasterState instance.
+    var RasterState = function ()
+    {
+        if (!(this instanceof RasterState))
+            return new RasterState();
+
+        this.type                  = ResourceType.STATE_OBJECT;
+        this.subType               = ResourceSubType.RASTER_STATE;
+        this.colorWrite            = [true, true, true, true];
+        this.cullingEnabled        = false;
+        this.cullFace              = WebGLConstants.BACK;
+        this.windingOrder          = WebGLConstants.CCW;
+        this.scissorTestEnabled    = false;
+        this.scissorX              = 0;
+        this.scissorY              = 0;
+        this.scissorWidth          = 0;
+        this.scissorHeight         = 0;
+        this.lineWidth             = 1.0;
+        this.offsetFactor          = 0.0;
+        this.offsetUnits           = 0.0;
+        this.sampleCoverageEnabled = false;
+        this.sampleAlphaToCoverage = false;
+        this.invertCoverage        = false;
+        this.coverageValue         = 1.0;
+        return this;
+    };
+
+    /// @summary Serializes the current contents of the instance into an object
+    /// that can be passed to RasterState.specifyAttributes() to restore state.
+    /// @return An object with the same fields expected on the args argument of
+    /// the RasterState.specifyAttributes() function.
+    RasterState.prototype.serialize = function ()
+    {
+        return {
+            colorWrite            : this.colorWrite.slice(0),
+            cullingEnabled        : this.cullingEnabled,
+            cullFace              : enumraw(this.cullFace),
+            windingOrder          : enumraw(this.windingOrder),
+            scissorTestEnabled    : this.scissorTestEnabled,
+            scissorX              : this.scissorX,
+            scissorY              : this.scissorY,
+            scissorWidth          : this.scissorWidth,
+            scissorHeight         : this.scissorHeight,
+            lineWidth             : this.lineWidth,
+            offsetFactor          : this.offsetFactor,
+            offsetUnits           : this.offsetUnits,
+            sampleCoverageEnabled : this.sampleCoverageEnabled,
+            sampleAlphaToCoverage : this.sampleAlphaToCoverage,
+            invertCoverage        : this.invertCoverage,
+            coverageValue         : this.coverageValue
+        };
+    };
+
+    /// @summary Specifies the creation attributes of the raster state. See:
+    /// http://www.opengl.org/archives/resources/faq/technical/polygonoffset.htm
+    /// http://www.khronos.org/opengles/sdk/1.1/docs/man/glSampleCoverage.xml
+    /// @param args An object specifying creation attributes for the resource.
+    /// @param args.colorWrite An array of four boolean values indicating 
+    /// whether data should be written to the RGBA color channels, respectively.
+    /// @param args.cullingEnabled true if backface culling is enabled.
+    /// @param args.cullFace A string specifying which side of the triangle 
+    /// should be culled, one of FRONT or BACK. The default is BACK.
+    /// @param args.windingOrder A string specifying the winding order for 
+    /// front-facing triangles, one of CW or CCW. The default is CCW.
+    /// @param args.scissorTestEnabled true if scissor box testing is enabled.
+    /// @param args.scissorX The x-coordinate of the upper-left corner of the 
+    /// scissor rectangle.
+    /// @param args.scissorY The y-coordinate of the upper-left corner of the 
+    /// scissor rectangle.
+    /// @param args.scissorWidth The width of the scissor rectangle.
+    /// @param args.scissorHeight The height of the scissor rectangle.
+    /// @param args.lineWidth The width of a line, in pixels. Support for 
+    /// values greater than 1.0 is implementation-specific. The default is 1.0.
+    /// @param args.offsetFactor The polygon offset factor. The default is 0.0.
+    /// @param args.offsetUnits The polygon offset units. The default is 0.0.
+    /// @param args.sampleCoverageEnabled true to enable coverage computation.
+    /// @param args.sampleAlphaToCoverage true to scale sampled alpha values by
+    /// the computed coverage.
+    /// @param args.invertCoverage true to invert sample coverage.
+    /// @param args.coverageValue The alpha coverage value. Default is 1.0.
+    /// @return true if the creation attributes were validated and stored.
+    RasterState.prototype.specifyAttributes = function (args)
+    {
+        var def = function (value, default_value)
+            {
+                if (value !== undefined)
+                    return value;
+                else
+                    return default_value;
+            };
+
+        // ensure that all required arguments are specified.
+        args = args || {};
+        args.colorWrite            = def(args.colorWrite, [true, true, true, true])
+        args.cullingEnabled        = def(args.cullingEnabled, false);
+        args.cullFace              = def(args.cullFace, 'BACK');
+        args.windingOrder          = def(args.windingOrder, 'CCW');
+        args.scissorTestEnabled    = def(args.scissorTestEnabled, false);
+        args.scissorX              = def(args.scissorX, 0);
+        args.scissorY              = def(args.scissorY, 0);
+        args.scissorWidth          = def(args.scissorWidth, 0);
+        args.scissorHeight         = def(args.scissorHeight, 0);
+        args.lineWidth             = def(args.lineWidth, 1.0);
+        args.offsetFactor          = def(args.offsetFactor, 0.0);
+        args.offsetUnits           = def(args.offsetUnits, 0.0);
+        args.sampleCoverageEnabled = def(args.sampleCoverageEnabled, false);
+        args.sampleAlphaToCoverage = def(args.sampleAlphaToCoverage, false);
+        args.invertCoverage        = def(args.invertCoverage, false);
+        args.coverageValue         = def(args.coverageValue, 1.0);
+
+        // convert string values to their corresponding enum value.
+        var GL = WebGLConstants;
+        this.colorWrite            = args.colorWrite.splice(0);
+        this.cullingEnabled        = args.cullingEnabled;
+        this.cullFace              = GL[args.cullFace];
+        this.windingOrder          = GL[args.windingOrder];
+        this.scissorTestEnabled    = args.scissorTestEnabled;
+        this.scissorX              = args.scissorX;
+        this.scissorY              = args.scissorY;
+        this.scissorWidth          = args.scissorWidth;
+        this.scissorHeight         = args.scissorHeight;
+        this.lineWidth             = args.lineWidth;
+        this.offsetFactor          = args.offsetFactor;
+        this.offsetUnits           = args.offsetUnits;
+        this.sampleCoverageEnabled = args.sampleCoverageEnabled;
+        this.sampleAlphaToCoverage = args.sampleAlphaToCoverage;
+        this.invertCoverage        = args.invertCoverage;
+        this.coverageValue         = args.coverageValue;
+        return true;
+    };
+
+    /// @summary Creates any backing WebGL resources.
+    /// @param gl The WebGLRenderingContext.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return true if the WebGL resources were created successfully.
+    RasterState.prototype.createBackingResources = function (gl, debug)
+    {
+        return true; // nothing to do for this type
+    };
+
+    /// @summary Destroys any backing WebGL resources.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The RasterState.
+    RasterState.prototype.deleteBackingResources = function (gl)
+    {
+        return this; // nothing to do for this type
+    };
+
+    /// @summary Constructor function for a type storing values for all render
+    /// states associated with depth and stencil testing.
+    /// @return A reference to the new DepthStencilState instance.
+    var DepthStencilState = function ()
+    {
+        if (!(this instanceof DepthStencilState))
+            return DepthStencilState();
+
+        this.type                    = ResourceType.STATE_OBJECT;
+        this.subType                 = ResourceSubType.DEPTH_STENCIL_STATE;
+        this.depthWriteEnabled       = true;
+        this.depthTestEnabled        = false;
+        this.depthTestFunction       = WebGLConstants.LESS;
+        this.stencilTestEnabled      = false;
+        this.stencilMaskBack         = 0xFFFFFFFF;
+        this.stencilReferenceBack    = 0;
+        this.stencilFunctionBack     = WebGLConstants.ALWAYS;
+        this.stencilFailOpBack       = WebGLConstants.KEEP;
+        this.stencilPassZFailOpBack  = WebGLConstants.KEEP;
+        this.stencilPassZPassOpBack  = WebGLConstants.KEEP;
+        this.stencilMaskFront        = 0xFFFFFFFF;
+        this.stencilReferenceFront   = 0;
+        this.stencilFunctionFront    = WebGLConstants.ALWAYS;
+        this.stencilFailOpFront      = WebGLConstants.KEEP;
+        this.stencilPassZFailOpFront = WebGLConstants.KEEP;
+        this.stencilPassZPassOpFront = WebGLConstants.KEEP;
+        return this;
+    };
+
+    /// @summary Serializes the current contents of the instance into an object
+    /// that can be passed to DepthStencilState.specifyAttributes() to restore.
+    /// @return An object with the same fields expected on the args argument of
+    /// the DepthStencilState.specifyAttributes() function.
+    DepthStencilState.prototype.serialize = function ()
+    {
+        return {
+            depthWriteEnabled       : this.depthWriteEnabled,
+            depthTestEnabled        : this.depthTestEnabled, 
+            depthTestFunction       : enumraw(this.depthTestFunction),
+            stencilTestEnabled      : this.stencilTestEnabled, 
+            stencilMaskBack         : this.stencilMaskBack,
+            stencilReferenceBack    : this.stencilReferenceBack,
+            stencilFunctionBack     : enumraw(this.stencilFunctionBack),
+            stencilFailOpBack       : enumraw(this.stencilFailOpBack),
+            stencilPassZFailOpBack  : enumraw(this.stencilPassZFailOpBack),
+            stencilPassZPassOpBack  : enumraw(this.stencilPassZPassOpBack),
+            stencilMaskFront        : this.stencilMaskFront, 
+            stencilReferenceFront   : this.stencilReferenceFront, 
+            stencilFunctionFront    : enumraw(this.stencilFunctionFront),
+            stencilFailOpFront      : enumraw(this.stencilFailOpFront),
+            stencilPassZFailOpFront : enumraw(this.stencilPassZFailOpFront),
+            stencilPassZPassOpFront : enumraw(this.stencilPassZPassOpFront)
+        };
+    };
+
+    /// @summary Specifies the creation attributes of the render state.
+    /// @param args An object specifying creation attributes for the resource.
+    /// @param args.depthWriteEnabled true to write depth values.
+    /// @param args.depthTestEnabled true to enable depth testing.
+    /// @param args.depthTestFunction A string specifying the function to use 
+    /// when comparing depth values, one of NEVER, EQUAL, LESS, LEQUAL, 
+    /// GREATER, GEQUAL, NOTEQUAL or ALWAYS. The default is LESS.
+    /// @param args.stencilTestEnabled true to enable stencil testing.
+    /// @param args.stencilMaskBack A 32-bit unsigned integer value specifying
+    /// the stencil mask value for back-facing triangles.
+    /// @param args.stencilReferenceBack An 8-bit unsigned integer value 
+    /// specifying the reference value for back-facing triangles.
+    /// @param args.stencilFunctionBack A string specifying the function to use
+    /// when comparing stencil values for back-facing triangles. May have the 
+    /// same values as @a args.depthTestFunction. The default is ALWAYS.
+    /// @param args.stencilFailOpBack A string specifying the operation to 
+    /// perform when the stencil test fails for back-facing triangles, one of 
+    /// KEEP, ZERO, REPLACE, INCR, INCR_WRAP, DECR, DECR_WRAP or INVERT. The 
+    /// default is KEEP.
+    /// @param args.stencilPassZFailOpBack A string specifying the operation to
+    /// perform when the stencil test passes, but the depth test fails. The 
+    /// default is KEEP.
+    /// @param args.stencilPassZPassOpBack A string specifying the operation to 
+    /// perform when both the stencil and depth tests pass. The default is KEEP.
+    /// @param args.stencilMaskFront A 32-bit unsigned integer value specifying
+    /// the stencil mask value for front-facing triangles.
+    /// @param args.stencilReferenceFront An 8-bit unsigned integer value 
+    /// specifying the reference value for front-facing triangles.
+    /// @param args.stencilFunctionFront A string specifying the function to use
+    /// when comparing stencil values for front-facing triangles. May have the 
+    /// same values as @a args.depthTestFunction. The default is ALWAYS.
+    /// @param args.stencilFailOpFront A string specifying the operation to 
+    /// perform when the stencil test fails for front-facing triangles, one of 
+    /// KEEP, ZERO, REPLACE, INCR, INCR_WRAP, DECR, DECR_WRAP or INVERT. The 
+    /// default is KEEP.
+    /// @param args.stencilPassZFailOpFront A string specifying the operation 
+    /// to perform when the stencil test passes, but the depth test fails. The 
+    /// default is KEEP.
+    /// @param args.stencilPassZPassOpFront A string specifying the operation to 
+    /// perform when both the stencil and depth tests pass. The default is KEEP.
+    /// @return true if the creation attributes were validated and stored.
+    DepthStencilState.prototype.specifyAttributes = function (args)
+    {
+        var def = function (value, default_value)
+            {
+                if (value !== undefined)
+                    return value;
+                else
+                    return default_value;
+            };
+
+        // ensure that all required arguments are specified.
+        args = args || {};
+        args.depthWriteEnabled       = def(args.depthWriteEnabled, true);
+        args.depthTestEnabled        = def(args.depthTestEnabled, false);
+        args.depthTestFunction       = def(args.depthTestFunction, 'LESS');
+        args.stencilTestEnabled      = def(args.stencilTestEnabled, false);
+        args.stencilMaskBack         = def(args.stencilMaskBack, 0xFFFFFFFF);
+        args.stencilReferenceBack    = def(args.stencilReferenceBack, 0);
+        args.stencilFunctionBack     = def(args.stencilFunctionBack, 'ALWAYS');
+        args.stencilFailOpBack       = def(args.stencilFailOpBack, 'KEEP');
+        args.stencilPassZFailOpBack  = def(args.stencilPassZFailOpBack, 'KEEP');
+        args.stencilPassZPassOpBack  = def(args.stencilPassZPassOpBack, 'KEEP');
+        args.stencilMaskFront        = def(args.stencilMaskFront, 0xFFFFFFFF);
+        args.stencilReferenceFront   = def(args.stencilReferenceFront, 0);
+        args.stencilFunctionFront    = def(args.stencilFunctionFront, 'ALWAYS');
+        args.stencilFailOpFront      = def(args.stencilFailOpFront, 'KEEP');
+        args.stencilPassZFailOpFront = def(args.stencilPassZFailOpFront, 'KEEP');
+        args.stencilPassZPassOpFront = def(args.stencilPassZPassOpFront, 'KEEP');
+
+        // convert string values to their corresponding enum value.
+        var GL = WebGLConstants;
+        this.depthWriteEnabled       = args.depthWriteEnabled;
+        this.depthTestEnabled        = args.depthTestEnabled;
+        this.depthTestFunction       = GL[args.depthTestFunction];
+        this.stencilTestEnabled      = args.stencilTestEnabled;
+        this.stencilMaskBack         = args.stencilMaskBack;
+        this.stencilReferenceBack    = args.stencilReferenceBack;
+        this.stencilFunctionBack     = GL[args.stencilFunctionBack];
+        this.stencilFailOpBack       = GL[args.stencilFailOpBack];
+        this.stencilPassZFailOpBack  = GL[args.stencilPassZFailOpBack];
+        this.stencilPassZPassOpBack  = GL[args.stencilPassZPassOpBack];
+        this.stencilMaskFront        = args.stencilMaskFront;
+        this.stencilReferenceFront   = args.stencilReferenceFront;
+        this.stencilFunctionFront    = GL[args.stencilFunctionFront];
+        this.stencilFailOpFront      = GL[args.stencilFailOpFront];
+        this.stencilPassZFailOpFront = GL[args.stencilPassZFailOpFront];
+        this.stencilPassZPassOpFront = GL[args.stencilPassZPassOpFront];
+        return true;
+    };
+
+    /// @summary Creates any backing WebGL resources.
+    /// @param gl The WebGLRenderingContext.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return true if the WebGL resources were created successfully.
+    DepthStencilState.prototype.createBackingResources = function (gl, debug)
+    {
+        return true; // nothing to do for this type
+    };
+
+    /// @summary Destroys any backing WebGL resources.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The DepthStencilState.
+    DepthStencilState.prototype.deleteBackingResources = function (gl)
+    {
+        return this; // nothing to do for this type
+    };
+
+    /// @summary Constructor function for a type representing the current state
+    /// of a WebGLRenderingContext. The DrawContext is used to apply state
+    /// changes, bind resources, and set uniforms and constant attribute values.
+    /// @return The new DrawContext instance.
+    var DrawContext = function ()
+    {
+        if (!(this instanceof DrawContext))
+            return new DrawContext();
+
+        this.drawBuffersWEBGL        = null;
+        this.enabledExtensions       = {};
+        this.defaultDrawBuffer       = [WebGLConstants.BACK];
+        this.activeTextures          = new Array(TextureSlots.length);
+        this.activeTextureIndex      = 0;
+        this.activeProgram           = null;
+        this.activeFramebuffer       = null;
+        this.activeArrayBuffer       = null;
+        this.activeIndexBuffer       = null;
+        this.activeBlendState        = new BlendState();
+        this.activeRasterState       = new RasterState();
+        this.activeDepthStencilState = new DepthStencilState();
+        this.activeViewport          = {
+            x      : 0,
+            y      : 0,
+            width  : 1,
+            height : 1,
+            near   : 0.0,
+            far    : 0.0
+        };
+        return this;
+    };
+
+    /// @summary Enables an extension for use in the implementation.
+    /// @param gl The WebGLRenderingContext.
+    /// @param name The non-prefixed name of the extension to enable.
+    /// @return The extension object, or null.
+    DrawContext.prototype.enableExtension = function (gl, name)
+    {
+        var ext = this.enabledExtensions[name];
+        if (ext)  return ext;
+
+        // first, try without any vendor prefix.
+        ext = gl.getExtension(name);
+        if (ext)
+        {
+            if (name === 'WEBGL_draw_buffers')
+                this.drawBuffersWEBGL = ext;
+            this.enabledExtensions[name] = ext;
+            return ext;
+        }
+
+        // try the various vendor-prefixed versions.
+        var vendors = ['MOZ_','WEBKIT_','O_','IE_'];
+        for (var i  = 0, n = vendors.length; i < n; ++i)
+        {
+            ext  = gl.getExtension(vendors[i] + name);
+            if (ext)
+            {
+                if (name === 'WEBGL_draw_buffers')
+                    this.drawBuffersWEBGL = ext;
+                this.enabledExtensions[name] = ext;
+                return ext;
+            }
+        }
+        return null;
+    };
+
+    /// @summary Enables all extensions supported by the implementation.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The DrawContext.
+    DrawContext.prototype.enableAllExtensions = function (gl)
+    {
+        var supported = gl.getSupportedExtensions();
+        var vendors   = ['MOZ_', 'WEBKIT_', 'O_', 'IE_'];
+        for (var  i   = 0, n = supported.length; i < n; ++i)
+        {
+            var name  = supported[i];
+            var ext   = gl.getExtension(name);
+            if (ext)
+            {
+                for (var j = 0, m = vendors.length; j < m; ++j)
+                {
+                    var prefix = vendors[j];
+                    if (name.indexOf(prefix) === 0)
+                    {   // chop off the vendor prefix.
+                        name = name.substr(prefix.length);
+                        break;
+                    }
+                }
+                if (name === 'WEBGL_draw_buffers')
+                    this.drawBuffersWEBGL = ext;
+                this.enabledExtensions[name] = ext;
+            }
+        }
+        return this;
+    };
+
+    /// @summary Retrieves a previously enabled extension definition.
+    /// @param gl The WebGLRenderingContext.
+    /// @param name The non-prefixed name of the extension to retrieve.
+    /// @return The extension object, or null.
+    DrawContext.prototype.extension = function (gl, name)
+    {
+        return this.enabledExtensions[name] || null;
+    };
+
+    /// @summary Creates an object specifying the properties of the viewport. A
+    /// viewport can be applied using DrawContext.applyViewport().
+    /// @return An object specifying the viewport properties.
+    /// obj.x The x-coordinate of the upper-left corner of the viewport.
+    /// obj.y The y-coordinate of the upper-left corner of the viewport.
+    /// obj.width The width of the viewport, in pixels.
+    /// obj.height The height of the viewport, in pixels.
+    /// obj.near The distance to the near clipping plane.
+    /// obj.far The distance to the far clipping plane.
+    DrawContext.prototype.createViewport = function (width, height)
+    {
+        width  = width  || 1;
+        height = height || 1;
+        return {
+            x      : 0,
+            y      : 0,
+            width  : width,
+            height : height,
+            near   : 0.0,
+            far    : 1.0
+        };
+    };
+
+    /// @summary Applies a viewport configuration.
+    /// @param gl The WebGLRenderingContext.
+    /// @param view An object describing the viewport, as returned by the 
+    /// DrawContext.createViewport() function.
+    /// @return The DrawContext.
+    DrawContext.prototype.applyViewport = function (gl, view)
+    {
+        var vp = this.activeViewport;
+        var x  = view.x;
+        var y  = view.y;
+        var w  = view.width;
+        var h  = view.height;
+        var n  = view.near;
+        var f  = view.far;
+
+        if (vp.x !== x || vp.y !== y || vp.width !== w || vp.height !== h)
+        {
+            gl.viewport(x, y, w, h);
+            vp.x      = x;
+            vp.y      = y;
+            vp.width  = w;
+            vp.height = h;
+        }
+        if (vp.near !== n || vp.far !== f)
+        {
+            gl.depthRange(n, f);
+            vp.near   = n;
+            vp.far    = f;
+        }
+        return this;
+    };
+
+    /// @summary Applies an alpha blending state.
+    /// @param gl The WebGLRenderingContext.
+    /// @param state The BlendState resource.
+    /// @return The DrawContext.
+    DrawContext.prototype.applyBlendState = function (gl, state)
+    {
+        var active = this.activeBlendState;
+        if (active.blendEnabled !== state.blendEnabled)
+        {
+            if (state.blendEnabled) gl.enable(gl.BLEND);
+            else gl.disable(gl.BLEND);
+            active.blendEnabled = state.blendEnabled;
+        }
+
+        if (active.functionColor !== state.functionColor ||
+            active.functionAlpha !== state.functionAlpha)
+        {
+            gl.blendEquationSeparate(state.functionColor, state.functionAlpha);
+            active.functionColor = state.functionColor;
+            active.functionAlpha = state.functionAlpha;
+        }
+
+        if (active.sourceFactorColor !== state.sourceFactorColor ||
+            active.sourceFactorAlpha !== state.sourceFactorAlpha ||
+            active.targetFactorColor !== state.targetFactorColor ||
+            active.targetFactorAlpha !== state.targetFactorAlpha)
+        {
+            gl.blendFuncSeparate(state.sourceFactorColor, state.targetFactorColor, state.sourceFactorAlpha, state.targetFactorAlpha);
+            active.sourceFactorColor = state.sourceFactorColor;
+            active.sourceFactorAlpha = state.sourceFactorAlpha;
+            active.targetFactorColor = state.targetFactorColor;
+            active.targetFactorAlpha = state.targetFactorAlpha;
+        }
+
+        var curColor = active.constantColor;
+        var newColor = state.constantColor;
+        if (curColor[0] !== newColor[0] ||
+            curColor[1] !== newColor[1] ||
+            curColor[2] !== newColor[2] ||
+            curColor[3] !== newColor[3])
+        {
+            gl.blendColor(newColor[0], newColor[1], newColor[2], newColor[3]);
+            curColor[0] = newColor[0];
+            curColor[1] = newColor[1];
+            curColor[2] = newColor[2];
+            curColor[3] = newColor[3];
+        }
+        return this;
+    };
+
+    /// @summary Applies a rasterizer state.
+    /// @param gl The WebGLRenderingContext.
+    /// @param state The RasterState resource.
+    /// @return The DrawContext.
+    DrawContext.prototype.applyRasterState = function (gl, state)
+    {
+        var active = this.activeRasterState;
+        if (active.cullingEnabled !== state.cullingEnabled)
+        {
+            if (state.cullingEnabled) gl.enable(gl.CULL_FACE);
+            else gl.disable(gl.CULL_FACE);
+            active.cullingEnabled = state.cullingEnabled;
+        }
+        if (active.cullFace !== state.cullFace)
+        {
+            gl.cullFace(state.cullFace);
+            active.cullFace = state.cullFace;
+        }
+        if (active.windingOrder !== state.windingOrder)
+        {
+            gl.frontFace(state.windingOrder);
+            active.windingOrder = state.windingOrder;
+        }
+        if (active.scissorTestEnabled !== state.scissorTestEnabled)
+        {
+            if (state.scissorTestEnabled) gl.enable(gl.SCISSOR_TEST);
+            else gl.disable(gl.SCISSOR_TEST);
+            active.scissorTestEnabled = state.scissorTestEnabled;
+        }
+        if (active.scissorX      !== state.scissorX     ||
+            active.scissorY      !== state.scissorY     ||
+            active.scissorWidth  !== state.scissorWidth ||
+            active.scissorHeight !== state.scissorHeight)
+        {
+            gl.scissor(state.scissorX, state.scissorY, state.scissorWidth, state.scissorHeight);
+            active.scissorX      = state.scissorX;
+            active.scissorY      = state.scissorY;
+            active.scissorWidth  = state.scissorWidth;
+            active.scissorHeight = state.scissorHeight;
+        }
+        if (active.offsetFactor !== state.offsetFactor ||
+            active.offsetUnits  !== state.offsetUnits)
+        {
+            gl.polygonOffset(state.offsetFactor, state.offsetUnits);
+            active.offsetFactor   = state.offsetFactor;
+            active.offsetUnits    = state.offsetUnits;
+        }
+        if (active.sampleCoverageEnabled !== state.sampleCoverageEnabled)
+        {
+            if (state.sampleCoverageEnabled) gl.enable(gl.SAMPLE_COVERAGE);
+            else gl.disable(gl.SAMPLE_COVERAGE);
+            active.sampleCoverageEnabled = state.sampleCoverageEnabled;
+        }
+        if (active.sampleAlphaToCoverage !== state.sampleAlphaToCoverage)
+        {
+            if (state.sampleAlphaToCoverage) gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+            else gl.disable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+            active.sampleAlphaToCoverage = state.sampleAlphaToCoverage;
+        }
+        if (active.invertCoverage !== state.invertCoverage ||
+            active.coverageValue  !== state.coverageValue)
+        {
+            gl.sampleCoverage(state.coverageValue, state.invertCoverage);
+            active.invertCoverage = state.invertCoverage;
+            active.coverageValue  = state.coverageValue;
+        }
+        if (active.lineWidth !== state.lineWidth)
+        {
+            gl.lineWidth(state.lineWidth);
+            active.lineWidth = state.lineWidth;
+        }
+        if (active.colorWrite[0] !== state.colorWrite[0] ||
+            active.colorWrite[1] !== state.colorWrite[1] ||
+            active.colorWrite[2] !== state.colorWrite[2] ||
+            active.colorWrite[3] !== state.colorWrite[3])
+        {
+            gl.colorMask(state.colorWrite[0], state.colorWrite[1], state.colorWrite[2], state.colorWrite[3]);
+            active.colorWrite[0] = state.colorWrite[0];
+            active.colorWrite[1] = state.colorWrite[1];
+            active.colorWrite[2] = state.colorWrite[2];
+            active.colorWrite[3] = state.colorWrite[3];
+        }
+        return this;
+    };
+
+    /// @summary Applies a state affecting depth and stencil testing.
+    /// @param gl The WebGLRenderingContext.
+    /// @param state The DepthStencilState resource.
+    /// @return The DrawContext.
+    DrawContext.prototype.applyDepthStencilState = function (gl, state)
+    {
+        var active = this.activeDepthStencilState;
+        if (active.depthWriteEnabled !== state.depthWriteEnabled)
+        {
+            gl.depthMask(state.depthWriteEnabled);
+            active.depthWriteEnabled = state.depthWriteEnabled;
+        }
+        if (active.depthTestEnabled !== state.depthTestEnabled)
+        {
+            if (state.depthTestEnabled) gl.enable(gl.DEPTH_TEST);
+            else gl.disable(gl.DEPTH_TEST);
+            active.depthTestEnabled = state.depthTestEnabled;
+        }
+        if (active.depthTestFunction !== state.depthTestFunction)
+        {
+            gl.depthFunc(state.depthTestFunction);
+            active.depthTestFunction = state.depthTestFunction;
+        }
+        if (active.stencilTestEnabled !== state.stencilTestEnabled)
+        {
+            if (state.stencilTestEnabled) gl.enable(gl.STENCIL_TEST);
+            else gl.disable(gl.STENCIL_TEST);
+            active.stencilTestEnabled = state.stencilTestEnabled;
+        }
+        if (active.stencilMaskBack      !== state.stencilMaskBack     || 
+            active.stencilFunctionBack  !== state.stencilFunctionBack ||
+            active.stencilReferenceBack !== state.stencilReferenceBack) 
+        {
+            gl.stencilFuncSeparate(gl.BACK, state.stencilFunctionBack, state.stencilReferenceBack, state.stencilMaskBack);
+            active.stencilMaskBack      = state.stencilMaskBack;
+            active.stencilFunctionBack  = state.stencilFunctionBack;
+            active.stencilReferenceBack = state.stencilReferenceBack;
+        }
+        if (active.stencilFailOpBack      !== state.stencilFailOpBack      || 
+            active.stencilPassZFailOpBack !== state.stencilPassZFailOpBack || 
+            active.stencilPassZPassOpBack !== state.stencilPassZPassOpBack)
+        {
+            gl.stencilOpSeparate(gl.BACK, state.stencilFailOpBack, state.stencilPassZFailOpBack, state.stencilPassZPassOpBack);
+            active.stencilFailOpBack      = state.stencilFailOpBack;
+            active.stencilPassZFailOpBack = state.stencilPassZFailOpBack;
+            active.stencilPassZPassOpBack = state.stencilPassZPassOpBack;
+        }
+        if (active.stencilMaskFront      !== state.stencilMaskFront     || 
+            active.stencilFunctionFront  !== state.stencilFunctionFront ||
+            active.stencilReferenceFront !== state.stencilReferenceFront) 
+        {
+            gl.stencilFuncSeparate(gl.FRONT, state.stencilFunctionFront, state.stencilReferenceFront, state.stencilMaskFront);
+            active.stencilMaskFront      = state.stencilMaskFront;
+            active.stencilFunctionFront  = state.stencilFunctionFront;
+            active.stencilReferenceFront = state.stencilReferenceFront;
+        }
+        if (active.stencilFailOpFront      !== state.stencilFailOpFront      || 
+            active.stencilPassZFailOpFront !== state.stencilPassZFailOpFront || 
+            active.stencilPassZPassOpFront !== state.stencilPassZPassOpFront)
+        {
+            gl.stencilOpSeparate(gl.FRONT, state.stencilFailOpFront, state.stencilPassZFailOpFront, state.stencilPassZPassOpFront);
+            active.stencilFailOpFront      = state.stencilFailOpFront;
+            active.stencilPassZFailOpFront = state.stencilPassZFailOpFront;
+            active.stencilPassZPassOpFront = state.stencilPassZPassOpFront;
+        }
+        return this;
+    };
+
+    /// @summary Applies a scissor rectangle and enables scissor testing if the
+    /// rectangle is non-empty.
+    /// @param gl The WebGLRenderingContext.
+    /// @param x The x-coordinate of the upper-left corner of the rectangle.
+    /// @param y The y-coordinate of the upper-left corner of the rectangle.
+    /// @param width The width of the scissor region, in pixels.
+    /// @param height The height of the scissor region, in pixels.
+    /// @return The DrawContext.
+    DrawContext.prototype.applyScissorRegion = function (gl, x, y, width, height)
+    {
+        var active = this.activeRasterState;
+        if ((width > 0 || height > 0) && !active.scissorTestEnabled)
+        {
+            gl.enable(gl.SCISSOR_TEST);
+            active.scissorTestEnabled  = true;
+        }
+        else if (active.scissorTestEnabled)
+        {
+            gl.disable(gl.SCISSOR_TEST);
+            active.scissorTestEnabled  = false;
+        }
+        if (x      !== active.scissorX     ||
+            y      !== active.scissorY     ||
+            width  !== active.scissorWidth ||
+            height !== active.scissorHeight)
+        {
+            gl.scissor(x, y, width, height);
+            active.scissorX       = x;
+            active.scissorY       = y;
+            active.scissorWidth   = width;
+            active.scissorHeight  = height;
+        }
+        return this;
+    };
+
+    /// @summary Applies new stencil masking values.
+    /// @param gl The WebGLRenderingContext.
+    /// @param front A 32-bit unsigned integer representing the mask to use for
+    /// stencil testing with front-facing triangles.
+    /// @param back A 32-bit unsigned integer representing the mask to use for
+    /// stencil testing with back-facing triangles.
+    /// @return The DrawContext.
+    DrawContext.prototype.applyStencilMask = function (gl, front, back)
+    {
+        var active  = this.activeDepthStencilState;
+        if (front !== undefined && back === undefined)
+            back    = front;
+
+        if (active.stencilMaskBack !== back)
+        {
+            gl.stencilMaskSeparate(gl.BACK, back);
+            active.stencilMaskBack  = back;
+        }
+        if (active.stencilMaskFront !== front)
+        {
+            gl.stencilMaskSeparate(gl.FRONT, front);
+            active.stencilMaskFront = front;
+        }
+        return this;
+    };
+
+    /// @summary Enables or disables writing to the color and depth buffers. If
+    /// you need fine-grained control over which color channels get written, 
+    /// create and apply a RasterState object.
+    /// @param gl The WebGLRenderingContext.
+    /// @param color true to enable writes to the RGBA color channels.
+    /// @param depth true to enable writes to the depth buffer.
+    /// @return The DrawContext.
+    DrawContext.prototype.applyWriteMasks= function (gl, color, depth)
+    {
+        var active  = this.activeRasterState;
+        if (color !== undefined && depth === undefined)
+            depth   = color;
+
+        if (active.colorWrite[0] !== color ||
+            active.colorWrite[1] !== color || 
+            active.colorWrite[2] !== color || 
+            active.colorWrite[3] !== color)
+        {
+            gl.colorMask(color, color, color, color);
+            active.colorWrite[0] = color;
+            active.colorWrite[1] = color;
+            active.colorWrite[2] = color;
+            active.colorWrite[3] = color;
+        }
+        if (this.activeDepthStencilState.depthWriteEnabled !== depth)
+        {
+            gl.depthMask(depth);
+            this.activeDepthStencilState.depthWriteEnabled = depth;
+        }
+        return this;
+    };
+
+    /// @summary Selects a framebuffer for use as the current render target and
+    /// enables the associated draw buffers if supported by the implementation.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Framebuffer representing the resource to bind.
+    /// @return The Framebuffer previously bound as the active render target.
+    DrawContext.prototype.bindFramebuffer = function (gl, resource)
+    {
+        var ext   = this.drawBuffersWEBGL;
+        var bound = this.activeFramebuffer;
+        if (resource)
+        {
+            if (resource !== bound)
+            {
+                gl.bindFramebuffer(gl.FRAMEBUFFER, resource.framebuffer);
+                if (resource.drawBuffers.length > 1 && ext)
+                {
+                    ext.drawBuffersWEBGL(resource.drawBuffers);
+                }
+                else if (ext)
+                {
+                    ext.drawBuffersWEBGL(this.defaultDrawBuffer);
+                }
+                this.activeFramebuffer = resource;
+            }
+        }
+        else if (bound)
+        {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            if (bound.drawBuffers.length > 1 && ext)
+            {
+                ext.drawBuffersWEBGL(this.defaultDrawBuffer);
+            }
+            this.activeFramebuffer = null;
+        }
+        return bound;
+    }
+
+    /// @summary Selects an array buffer for use in supplying primitive data.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Buffer representing the resource to bind.
+    /// @return The Buffer previously bound as the array buffer.
+    DrawContext.prototype.bindArrayBuffer = function (gl, resource)
+    {
+        var bound = this.activeArrayBuffer;
+        if (resource)
+        {
+            if (resource !== bound)
+            {
+                gl.bindBuffer(gl.ARRAY_BUFFER, resource.buffer);
+                this.activeArrayBuffer = resource;
+            }
+        }
+        else if (bound)
+        {
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            this.activeArrayBuffer = null;
+        }
+        return bound;
+    };
+
+    /// @summary Selects a buffer for use in supplying primitive indices.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Buffer representing the resource to bind.
+    /// @return The Buffer previously bound as the index buffer.
+    DrawContext.prototype.bindIndexBuffer = function (gl, resource)
+    {
+        var bound = this.activeIndexBuffer;
+        if (resource)
+        {
+            if (resource !== bound)
+            {
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, resource.buffer);
+                this.activeIndexBuffer = resource;
+            }
+        }
+        else if (bound)
+        {
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+            this.activeIndexBuffer = null;
+        }
+        return bound;
+    };
+
+    /// @summary Selects a texture unit and binds a texture resource to it.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Texture representing the resource to bind.
+    /// @param unit The zero-based index of the texture unit to which the
+    /// texture should be bound. Defaults to the active texture unit.
+    /// @return The Texture previously bound to the specified texture unit.
+    DrawContext.prototype.bindTexture = function (gl, resource, unit)
+    {
+        if (unit === undefined)
+            unit   = this.activeTextureIndex;
+        if (unit !== this.activeTextureIndex)
+        {
+            gl.activeTexture(gl.TEXTURE0 + unit);
+            this.activeTextureIndex = unit;
+        }
+
+        var bound = this.activeTextures[unit];
+        if (resource)
+        {
+            if (resource !== bound)
+            {
+                gl.bindTexture(resource.bindTarget, resource.texture);
+                this.activeTextures[unit] = resource;
+            }
+        }
+        else if (bound)
+        {
+            gl.bindTexture(bound.bindTarget, null);
+            this.activeTextures[unit] = null;
+        }
+
+        return bound;
+    };
+
+    /// @summary Selects a shader program for use during primitive processing.
+    /// @param gl The WebGLRenderingContext.
+    /// @param resource The Program representing the resource to bind.
+    /// @return The Program previously used during primitive processing.
+    DrawContext.prototype.bindProgram = function (gl, resource)
+    {
+        var bound = this.activeProgram;
+        if (resource)
+        {
+            if (resource !== bound)
+            {
+                gl.useProgram(resource.program);
+                resource.boundTextureCount = 0;
+                this.activeProgram = resource;
+            }
+        }
+        else if (bound)
+        {
+            gl.useProgram(null);
+            this.activeProgram = null;
+        }
+        return bound;
+    };
+
+    /// @summary Unbinds all resources from the WebGLRenderingContext and
+    /// resets the internal bindings. This is typically called in response to
+    /// a lost context or when freeing all resources.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The DrawContext.
+    DrawContext.prototype.unbind = function (gl)
+    {
+        // typically, this is called in response to a lost context,
+        // but it's possible that this isn't the case, so unbind all
+        // resources on the WebGLRenderingContext.
+        if (gl && !gl.isContextLost())
+        {
+            for (var i = 0, n = TextureSlots.length; i < n; ++i)
+            {
+                gl.activeTexture(gl.TEXTURE0 + i);
+                gl.bindTexture(gl.TEXTURE_2D, null);
+                gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+            }
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.useProgram(null);
+            var ext = this.drawBuffersWEBGL;
+            if (ext)   ext.drawBuffersWEBGL(this.defaultDrawBuffer);
+        }
+
+        // always reset the active bindings in our internal state.
+        this.activeProgram      = null;
+        this.activeFramebuffer  = null;
+        this.activeArrayBuffer  = null;
+        this.activeIndexBuffer  = null;
+        this.activeTextureIndex = 0;
+        for (var i = 0, n = TextureSlots.length; i < n; ++i)
+            this.activeTextures[i] = null;
+
+        return this;
+    };
+
+    /// @summary Unbinds the active framebuffer.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The Framebuffer bound as the active render target, or null.
+    DrawContext.prototype.unbindFramebuffer = function (gl)
+    {
+        var ext     = this.drawBuffersWEBGL;
+        var bound   = this.activeFramebuffer;
+        if (bound !== null)
+        {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            if (bound.drawBuffers.length > 1 && ext)
+            {
+                ext.drawBuffersWEBGL(this.defaultDrawBuffer);
+            }
+            this.activeFramebuffer = null;
+        }
+        return bound;
+    }
+
+    /// @summary Unbinds the active array buffer.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The Buffer bound as the active array buffer, or null.
+    DrawContext.prototype.unbindArrayBuffer = function (gl)
+    {
+        var bound   = this.activeArrayBuffer;
+        if (bound !== null)
+        {
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            this.activeArrayBuffer = null;
+        }
+        return bound;
+    };
+
+    /// @summary Unbinds the active index buffer.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The Buffer bound as the active index buffer, or null.
+    DrawContext.prototype.unbindIndexBuffer = function (gl)
+    {
+        var bound   = this.activeIndexBuffer;
+        if (bound !== null)
+        {
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+            this.activeIndexBuffer = null;
+        }
+        return bound;
+    };
+
+    /// @summary Unbinds the texture bound to the specified texture unit. The
+    /// active texture unit is not modified.
+    /// @param gl The WebGLRenderingContext.
+    /// @param unit The zero-based index of the texture unit to unbind. If
+    /// unspecified, defaults to the active texture unit.
+    /// @return The Texture bound to the active texture unit, or null.
+    DrawContext.prototype.unbindTexture = function (gl, unit)
+    {
+        // save and change the active texture unit, if necesary.
+        var prev   = this.activeTextureIndex;
+        if (unit === undefined)
+            unit   = this.activeTextureIndex;
+        if (unit !== this.activeTextureIndex)
+            gl.activeTexture(gl.TEXTURE0 + unit);
+
+        // unbind the texture, changing the active texture unit if necessary.
+        var bound   = this.activeTextures[unit];
+        if (bound !== null)
+        {
+            gl.bindTexture(bound.bindTarget, null);
+            this.activeTextures[unit] = null;
+        }
+
+        // restore the active texture unit, if necessary.
+        if (prev !== unit)
+            gl.activeTexture(gl.TEXTURE0 + prev)
+
+        return bound;
+    };
+
+    /// @summary Unbinds all currently bound textures. The active texture unit
+    /// is reset to unit zero if a texture is currently bound to it.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The DrawContext.
+    DrawContext.prototype.unbindAllTextures = function (gl)
+    {
+        var texobj = this.activeTextures;
+        var unbind = false;
+        for (var i = 0, n = texobj.length; i < n; ++i)
+        {
+            if (texobj[i] !== null)
+            {
+                gl.activeTexture(gl.TEXTURE0 + i);
+                gl.bindTexture(gl.TEXTURE_2D, null);
+                gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+                texobj[i] = null;
+                unbind    = true;
+            }
+        }
+        if (unbind)
+        {
+            this.activeTextureIndex = 0;
+            gl.activeTexture(gl.TEXTURE0);
+        }
+        if (this.activeProgram !== null)
+            this.activeProgram.boundTextureCount = 0;
+
+        return this;
+    };
+
+    /// @summary Unbinds the active shader program.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The Program bound as the active shader, or null.
+    DrawContext.prototype.unbindProgram = function (gl)
+    {
+        var bound   = this.activeProgram;
+        if (bound !== null)
+        {
+            gl.useProgram(null);
+            this.activeProgram = null;
+        }
+        return bound;
+    };
+
+    /// @summary Sets the value of a uniform variable for the active shader.
+    /// @param gl The WebGLRenderingContext.
+    /// @param name The name of the uniform to update.
+    /// @param value The value to assign to the uniform. For vector types, this
+    /// is either a JavaScript array or the corresponding ArrayBuffer type. For
+    /// scalar attributes, this is a scalar JavaScript value. For samplers,
+    /// this is an instance of the WebGL.Texture type.
+    /// @return The DrawContext.
+    DrawContext.prototype.setUniform = function (gl, name, value)
+    {
+        var program  = this.activeProgram;
+        var location = program.uniformLocations[name];
+        var type     = program.uniformTypes[name];
+        switch (type)
+        {
+            case gl.FLOAT_VEC4:
+                gl.uniform4fv(location, value);
+                break;
+
+            case gl.FLOAT_MAT4:
+                gl.uniformMatrix4fv(location, false, value);
+                break;
+
+            case gl.SAMPLER_2D:
+            case gl.SAMPLER_CUBE:
+                this.bindTexture(gl, value, program.boundTextureCount)
+                gl.uniform1i(location, program.boundTextureCount);
+                program.boundTextureCount++;
+                break;
+
+            case gl.FLOAT_VEC3:
+                gl.uniform3fv(location, value);
+                break;
+
+            case gl.FLOAT_VEC2:
+                gl.uniform2fv(location, value);
+                break;
+
+            case gl.FLOAT:
+                gl.uniform1f(location, value);
+                break;
+
+            case gl.FLOAT_MAT3:
+                gl.uniformMatrix3fv(location, false, value);
+                break;
+
+            case gl.FLOAT_MAT2:
+                gl.uniformMatrix2fv(location, false, value);
+                break;
+
+            case gl.INT:
+            case gl.BOOL:
+                gl.uniform1i(location, value);
+                break;
+
+            case gl.INT_VEC4:
+            case gl.BOOL_VEC4:
+                gl.uniform4iv(location, value);
+                break;
+
+            case gl.INT_VEC3:
+            case gl.BOOL_VEC3:
+                gl.uniform3iv(location, value);
+                break;
+
+            case gl.INT_VEC2:
+            case gl.BOOL_VEC2:
+                gl.uniform2iv(location, value);
+                break;
+        }
+        return this;
+    };
+
+    /// @summary Sets a vertex attribute to be a constant value. Only floating-
+    /// point values (and vectors thereof) may be specified as constants.
+    /// @param gl The WebGLRenderingContext.
+    /// @param name The name of the vertex attribute. This should match the
+    /// name of the attribute in the vertex shader.
+    /// @param value The constant vertex attribute value. For vector types,
+    /// this is either a JavaScript Number array or a Float32Array instance.
+    /// For scalar types, this is a single JavaScript Number value.
+    /// @return The DrawContext.
+    DrawContext.prototype.setConstantAttribute = function (gl, name, value)
+    {
+        var program = this.activeProgram;
+        var index   = program.attributeIndices[name];
+        var type    = program.attributeTypes[name];
+
+        switch (type)
+        {
+            case gl.FLOAT_VEC4:
+                gl.vertexAttrib4fv(index, value);
+                gl.disableVertexAttribArray(index);
+                break;
+
+            case gl.FLOAT_VEC3:
+                gl.vertexAttrib3fv(index, value);
+                gl.disableVertexAttribArray(index);
+                break;
+
+            case gl.FLOAT_VEC2:
+                gl.vertexAttrib2fv(index, value);
+                gl.disableVertexAttribArray(index);
+                break;
+
+            case gl.FLOAT:
+                gl.vertexAttrib1f(index, value);
+                gl.disableVertexAttribArray(index);
+                break;
+        }
+        return this;
+    };
+
+    /// @summary Sets the array buffer data sources for each vertex attribute
+    /// used by the currently bound shader program. This function may change
+    /// the currently bound array buffer.
+    /// @param gl The WebGLRenderingContext.
+    /// @param fields An array of field descriptors describing the layout of
+    /// element structures within the source buffers. See WebGL.field().
+    /// @param buffers An array of instances of the WebGL.Buffer type specifying
+    /// the data source for each vertex attribute. Items in this array have a
+    /// one-to-one correspondency with @a fields, such that fields[i] is
+    /// sourced from buffers[i].
+    /// @return The DrawContext.
+    DrawContext.prototype.enableAttributes = function (gl, fields, buffers)
+    {
+        var program = this.activeProgram;
+        var indices = program.attributeIndices;
+        for (var  i = 0, n = fields.length; i < n; ++i)
+        {
+            // @note: gl.vertexAttribPointer captures the
+            // buffer bound to gl.ARRAY_BUFFER at call-time.
+            var field  = fields [i];
+            var buffer = buffers[i];
+            var index  = indices[field.name];
+            this.bindArrayBuffer(gl, buffer);
+            gl.enableVertexAttribArray(index);
+            gl.vertexAttribPointer(
+                index,
+                field.dimension,
+                field.dataType,
+                field.normalize,
+                buffer.elementSize,
+                field.byteOffset)
+        }
+        return this;
+    };
+
+    /// @summary Submits a batch of non-indexed primitives to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param count The number of vertices to read.
+    /// @param offset The zero-based index of the first vertex to read.
+    /// @return The DrawContext.
+    DrawContext.prototype.points = function (gl, count, offset)
+    {
+        gl.drawArrays(gl.POINTS, offset, count);
+        return this;
+    };
+
+    /// @summary Submits a batch of non-indexed primitives to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param count The number of vertices to read.
+    /// @param offset The zero-based index of the first vertex to read.
+    /// @return The DrawContext.
+    DrawContext.prototype.lines = function (gl, count, offset)
+    {
+        gl.drawArrays(gl.LINES, offset, count);
+        return this;
+    };
+
+    /// @summary Submits a batch of non-indexed primitives to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param count The number of vertices to read.
+    /// @param offset The zero-based index of the first vertex to read.
+    /// @return The DrawContext.
+    DrawContext.prototype.lineLoop = function (gl, count, offset)
+    {
+        gl.drawArrays(gl.LINE_LOOP, offset, count);
+        return this;
+    };
+
+    /// @summary Submits a batch of non-indexed primitives to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param count The number of vertices to read.
+    /// @param offset The zero-based index of the first vertex to read.
+    /// @return The DrawContext.
+    DrawContext.prototype.lineStrip = function (gl, count, offset)
+    {
+        gl.drawArrays(gl.LINE_STRIP, offset, count);
+        return this;
+    };
+
+    /// @summary Submits a batch of non-indexed primitives to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param count The number of vertices to read.
+    /// @param offset The zero-based index of the first vertex to read.
+    /// @return The DrawContext.
+    DrawContext.prototype.triangles = function (gl, count, offset)
+    {
+        gl.drawArrays(gl.TRIANGLES, offset, count);
+        return this;
+    };
+
+    /// @summary Submits a batch of non-indexed primitives to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param type A string value indicating the type of primitives to submit.
+    /// Supported values are POINTS, LINES, TRIANGLES, LINE_LOOP, LINE_STRIP,
+    /// TRIANGLE_FAN and TRIANGLE_STRIP.
+    /// @param count The number of vertices to read.
+    /// @param offset The zero-based index of the first vertex to read.
+    /// @return The DrawContext.
+    DrawContext.prototype.triangleFan = function (gl, count, offset)
+    {
+        gl.drawArrays(gl.TRIANGLE_FAN, offset, count);
+        return this;
+    };
+
+    /// @summary Submits a batch of non-indexed primitives to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param count The number of vertices to read.
+    /// @param offset The zero-based index of the first vertex to read.
+    /// @return The DrawContext.
+    DrawContext.prototype.triangleStrip = function (gl, count, offset)
+    {
+        gl.drawArrays(gl.TRIANGLE_STRIP, offset, count);
+        return this;
+    };
+
+    /// @summary Submits a batch of indexed primitives to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param count The number of indices to read.
+    /// @param offset The zero-based index of the first vertex index.
+    /// @param indexSize The size of a single index, in bytes.
+    /// @return The DrawContext.
+    DrawContext.prototype.indexedTriangles = function (gl, count, offset, indexSize)
+    {
+        gl.drawElements(gl.TRIANGLES, count, IndexType[indexSize], offset * indexSize);
+        return this;
+    };
+
+    /// @summary Submits a batch of indexed primitives to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param count The number of indices to read.
+    /// @param offset The zero-based index of the first vertex index.
+    /// @param indexSize The size of a single index, in bytes.
+    /// @return The DrawContext.
+    DrawContext.prototype.indexedTriangleFan = function (gl, count, offset, indexSize)
+    {
+        gl.drawElements(gl.TRIANGLE_FAN, count, IndexType[indexSize], offset * indexSize);
+        return this;
+    };
+
+    /// @summary Submits a batch of indexed primitives to the GPU.
+    /// @param gl The WebGLRenderingContext.
+    /// @param count The number of indices to read.
+    /// @param offset The zero-based index of the first vertex index.
+    /// @param indexSize The size of a single index, in bytes.
+    /// @return The DrawContext.
+    DrawContext.prototype.indexedTriangleStrip = function (gl, count, offset, indexSize)
+    {
+        gl.drawElements(gl.TRIANGLE_STRIP, count, IndexType[indexSize], offset * indexSize);
+        return this;
     };
 
     /// Constructor function for the core Emitter type, which provides a
@@ -153,20 +3855,28 @@ var WebGL = (function (exports)
             {
                 case 1:
                     for (i = 0; i < n; ++i)
+                    {
                         listener[i].call(this);
+                    }
                     break;
                 case 2:
                     for (i = 0; i < n; ++i)
+                    {
                         listener[i].call(this, arguments[1]);
+                    }
                     break;
                 case 3:
                     for (i = 0; i < n; ++i)
+                    {
                         listener[i].call(this, arguments[1], arguments[2]);
+                    }
                     break;
                 default:
                     var args = Array.prototype.slice.call(arguments, 1);
                     for (i   = 0; i < n; ++i)
+                    {
                         listener[i].apply(this, args);
+                    }
                     break;
             }
         }
@@ -190,1883 +3900,37 @@ var WebGL = (function (exports)
         return target;
     };
 
-    /// A handy utility function that prevents having to write the same
-    /// obnoxious code everytime. The typical javascript '||' trick works for
-    /// strings, arrays and objects, but it doesn't work for booleans or
-    /// integer values.
-    /// @param value The value to test.
-    /// @param theDefault The value to return if @a value is undefined.
-    /// @return Either @a value or @a theDefault (if @a value is undefined.)
-    function defaultValue(value, theDefault)
-    {
-        return (value !== undefined) ? value : theDefault;
-    }
+    /// Set the functions exported from the module.
+    exports.GL                     = WebGLConstants;
+    exports.ResourceType           = ResourceType;
+    exports.ResourceSubType        = ResourceSubType;
+
+    exports.enumraw                = enumraw; // for use when debugging
+    exports.enumfmt                = enumfmt; // for use when debugging
+    exports.supported              = supported;
+    exports.createContext          = createContext;
+    exports.field                  = field;
+    exports.fieldSize              = fieldSize;
+    exports.elementSize            = elementSize;
+    exports.orderByByteOffset      = orderByByteOffset;
+    exports.createBufferView       = createBufferView;
+    exports.resetBufferView        = resetBufferView;
+    exports.interleave             = interleave;
+    exports.createImageView        = createImageView;
+    exports.imageStorageAttributes = imageStorageAttributes;
+    exports.mipLevelCount          = mipLevelCount;
+    exports.mipLevelDimension      = mipLevelDimension;
+
+    exports.Buffer                 = Buffer;
+    exports.Texture                = Texture;
+    exports.Program                = Program;
+    exports.Renderbuffer           = Renderbuffer;
+    exports.Framebuffer            = Framebuffer;
+    exports.BlendState             = BlendState;
+    exports.RasterState            = RasterState;
+    exports.DepthStencilState      = DepthStencilState;
+    exports.DrawContext            = DrawContext;
+    exports.Emitter                = Emitter;
 
-    /// Define a utility function to perform prototype inheritence, such that a
-    /// child type inherits the fields and methods of a parent type.
-    /// @param childCtor The constructor function for the child type.
-    /// @param parentCtor The constructor function for the parent type.
-    function inherits(childCtor, parentCtor)
-    {
-        childCtor.supertype = parentCtor;
-        childCtor.prototype = Object.create(
-            parentCtor.prototype, {
-                constructor : {
-                    value         : childCtor,
-                    enumerable    : false,
-                    writable      : true,
-                    configurable  : true
-                }
-            });
-    }
-
-    /// Constructor function for the GLContext type. The GLContext manages
-    /// global render state and all resource managemen and data upload.
-    /// @param gl The WebGLRenderingContext object.
-    /// @param canvas The DOM Canvas element used to create context @a gl.
-    var GLContext = function (gl, canvas)
-    {
-        if (!(this instanceof GLContext))
-        {
-            return new GLContext(gl);
-        }
-        this.gl                      = gl;
-        this.canvas                  = canvas;
-        this.activeTextures          = new Array(TextureSlots.length);
-        this.activeTextureIndex      = 0;
-        this.activeProgram           = null;
-        this.activeArrayBuffer       = null;
-        this.activeElementBuffer     = null;
-        this.activeViewport          = this.createViewport(canvas);
-        this.activeBlendState        = this.createBlendState();
-        this.activeDepthStencilState = this.createDepthStencilState();
-        this.activeRasterState       = this.createRasterState();
-        this.defaultViewport         = this.createViewport(canvas);
-        // install handlers for context lost/restored events.
-        canvas.addEventListener('webglcontextlost',     this.handleContextLost.bind(this),     false);
-        canvas.addEventListener('webglcontextrestored', this.handleContextRestored.bind(this), false);
-        // @todo: extension querying
-        return this;
-    };  inherits(GLContext, Emitter);
-
-    /// Handler for the Canvas webglcontextlost event. This handler suppresses
-    /// the default behavior which prevents the context from ever being
-    /// restored and emits a 'context:lost' event on the GLContext.
-    /// @param event The DOM Event object.
-    GLContext.prototype.handleContextLost = function (event)
-    {
-        event.preventDefault();
-        this.emit('context:lost', this);
-    };
-
-    /// Handler for the Canvas webglcontextrestored event. The handler emits a
-    /// 'context:restored' event on the GLContext.
-    /// @param event The DOM Event object.
-    GLContext.prototype.handleContextRestored = function (event)
-    {
-        this.emit('context:restored', this);
-    };
-
-    /// Creates an object specifying the properties of the viewport.
-    /// @param canvas An optional reference to the DOM Canvas element used to
-    /// create the render context. If specified, the Canvas width and height
-    /// are used as the viewport width and height.
-    /// @return An object specifying the viewport properties.
-    /// obj.x The x-coordinate of the upper-left corner of the viewport.
-    /// obj.y The y-coordinate of the upper-left corner of the viewport.
-    /// obj.width The width of the viewport, in pixels.
-    /// obj.height The height of the viewport, in pixels.
-    /// obj.near The distance to the near clipping plane.
-    /// obj.far The distance to the far clipping plane.
-    GLContext.prototype.createViewport = function (canvas)
-    {
-        var width  = 1;
-        var height = 1;
-        if (canvas)
-        {
-            width  = canvas.width;
-            height = canvas.height;
-        }
-        return {
-            x      : 0,
-            y      : 0,
-            width  : width,
-            height : height,
-            near   : 0.0,
-            far    : 1.0
-        };
-    };
-
-    /// Applies a viewport configuration.
-    /// @param viewport A viewport object as returned by the function
-    /// @a GLContext.createViewport().
-    /// @return The GLContext.
-    GLContext.prototype.applyViewport = function (viewport)
-    {
-        var gl      = this.gl;
-        var current = this.activeViewport;
-        var n_x     = viewport.x;
-        var n_y     = viewport.y;
-        var n_w     = viewport.width;
-        var n_h     = viewport.height;
-        var n_n     = viewport.near;
-        var n_f     = viewport.far;
-        if (current.x     !== n_x || current.y      !== n_y ||
-            current.width !== n_w || current.height !== n_h)
-        {
-            gl.viewport(n_x, n_y, n_w, n_h);
-            current.x      = n_x;
-            current.y      = n_y;
-            current.width  = n_w;
-            current.height = n_h;
-        }
-        if (current.near !== n_n || current.far !== n_f)
-        {
-            gl.depthRange(n_n, n_f);
-            current.near   = n_n;
-            current.far    = n_f;
-        }
-        return this;
-    };
-
-    /// Creates a mutable blend state object.
-    /// @param args An object specifying initial state values. This object has
-    /// the same set of fields as the object returned by the function. Any
-    /// unspecified values are set to the default.
-    /// @return An object representing the default blending state.
-    /// obj.enabled A boolean value indicating whether blending is enabled.
-    /// obj.constantColorRGBA A 4-element array of floats for specifying a
-    /// constant blending color.
-    /// obj.sourceFactorRGB One of the WebGL BlendingFactorSrc values.
-    /// obj.sourceFactorAlpha One of the WebGL BlendingFactorSrc values.
-    /// obj.targetFactorRGB One of the WebGL BlendingFactorDest values.
-    /// obj.targetFactorAlpha One of the WebGL BlendingFactorDest values.
-    /// obj.functionRGB One of the WebGL Separate Blend Function values.
-    /// obj.functionAlpha One of the WebGL Separate Blend Function values.
-    GLContext.prototype.createBlendState = function (args)
-    {
-        var gl = this.gl;
-        var DV = defaultValue;
-        args   = args || {};
-        return {
-            enabled           : DV(args.enabled,               false),
-            constantColorRGBA : DV(args.constantColorRGBA,     [0.0,0.0,0.0,0.0]),
-            sourceFactorRGB   : DV(gl[args.sourceFactorRGB],   gl.ONE),
-            sourceFactorAlpha : DV(gl[args.sourceFactorAlpha], gl.ONE),
-            targetFactorRGB   : DV(gl[args.targetFactorRGB],   gl.ZERO),
-            targetFactorAlpha : DV(gl[args.targetFactorAlpha], gl.ZERO),
-            functionRGB       : DV(gl[args.functionRGB],       gl.FUNC_ADD),
-            functionAlpha     : DV(gl[args.functionAlpha],     gl.FUNC_ADD)
-        };
-    };
-
-    /// Applies a blending state configuration.
-    /// @param newState A blend state object as returned by the function
-    /// @a GLContext.createBlendState().
-    /// @return The GLContext.
-    GLContext.prototype.applyBlendState = function (newState)
-    {
-        var gl              = this.gl;
-        var n_enabled       = newState.enabled;
-        var n_func_rgb      = newState.functionRGB;
-        var n_func_alpha    = newState.functionAlpha;
-        var n_src_rgb       = newState.sourceFactorRGB;
-        var n_src_alpha     = newState.sourceFactorAlpha;
-        var n_dst_rgb       = newState.targetFactorRGB;
-        var n_dst_alpha     = newState.targetFactorAlpha;
-        var state           = this.activeBlendState;
-        if (state.enabled !== newState.enabled)
-        {
-            if (n_enabled)  gl.enable (gl.BLEND);
-            else            gl.disable(gl.BLEND);
-            state.enabled = n_enabled;
-        }
-        if (state.functionRGB   !== n_func_rgb ||
-            state.functionAlpha !== n_func_alpha)
-        {
-            gl.blendEquationSeparate(n_func_rgb, n_func_alpha);
-            state.functionRGB   = n_func_rgb;
-            state.functionAlpha = n_func_alpha;
-        }
-        if (state.sourceFactorRGB   !== n_src_rgb   ||
-            state.sourceFactorAlpha !== n_src_alpha ||
-            state.targetFactorRGB   !== n_dst_rgb   ||
-            state.targetFactorAlpha !== n_dst_alpha)
-        {
-            gl.blendFuncSeparate(n_src_rgb, n_dst_rgb, n_src_alpha, n_dst_alpha);
-            state.sourceFactorRGB   = n_src_rgb;
-            state.sourceFactorAlpha = n_src_alpha;
-            state.targetFactorRGB   = n_dst_rgb;
-            state.targetFactorAlpha = n_dst_alpha;
-        }
-        var curColor =    state.constantColorRGBA;
-        var newColor = newState.constantColorRGBA;
-        if (curColor[0] !== newColor[0] ||
-            curColor[1] !== newColor[1] ||
-            curColor[2] !== newColor[2] ||
-            curColor[3] !== newColor[3])
-        {
-            gl.blendColor(newColor[0], newColor[1], newColor[2], newColor[3]);
-            curColor[0] = newColor[0];
-            curColor[1] = newColor[1];
-            curColor[2] = newColor[2];
-            curColor[3] = newColor[3];
-        }
-        return this;
-    };
-
-    /// Creates a mutable state object representing state for the depth and
-    /// stencil buffers.
-    /// @param args An object specifying initial state values. This object has
-    /// the same set of fields as the object returned by the function. Any
-    /// unspecified values are set to the default.
-    /// @return An object representing the default depth-stencil state.
-    /// obj.depthWriteEnabled A boolean value, true if enabled.
-    /// obj.depthTestEnabled A boolean value, true if enabled.
-    /// obj.depthTestFunction One of the StencilFunction values.
-    /// obj.stencilTestEnabled A boolean value, true if enabled.
-    /// obj.stencilMaskBack A 32-bit unsigned integer value specifying the
-    /// stencil mask for back-facing triangles.
-    /// obj.stencilReferenceBack An 8-bit unsigned integer value specifying the
-    /// reference value for back-facing triangles during the stencil test.
-    /// obj.stencilFunctionBack One of the StencilFunction values.
-    /// obj.stencilFailOpBack One of the StencilOp values.
-    /// obj.stencilPassOpZFailBack One of the StencilOp values.
-    /// obj.stencilPassOpZPassBack One of the StencilOp values.
-    /// obj.stencilMaskFront A 32-bit unsigned integer value specifying the
-    /// stencil mask for front-facing triangles.
-    /// obj.stencilReferenceFront An 8-bit unsigned integer value specifying
-    /// the reference value for front-facing triangles during the stencil test.
-    /// obj.stencilFunctionFront One of the StencilFunction values.
-    /// obj.stencilFailOpFront One of the StencilOp values.
-    /// obj.stencilPassOpZFailFront One of the StencilOp values.
-    /// obj.stencilPassOpZPassFront One of the StencilOp values.
-    GLContext.prototype.createDepthStencilState = function (args)
-    {
-        var gl = this.gl;
-        var DV = defaultValue;
-        args   = args || {};
-        return {
-            depthWriteEnabled       : DV(args.depthWriteEnabled,           true),
-            depthTestEnabled        : DV(args.depthTestEnabled,            false),
-            depthTestFunction       : DV(gl[args.depthTestFunction],       gl.LESS),
-            stencilTestEnabled      : DV(args.stencilTestEnabled,          false),
-            stencilMaskBack         : DV(args.stenciMaskBack,              0xFFFFFFFF),
-            stencilReferenceBack    : DV(args.stencilReferenceBack,        0),
-            stencilFunctionBack     : DV(gl[args.stencilFunctionBack],     gl.ALWAYS),
-            stencilFailOpBack       : DV(gl[args.stencilFailOpBack],       gl.KEEP),
-            stencilPassOpZFailBack  : DV(gl[args.stencilPassOpZFailBack],  gl.KEEP),
-            stencilPassOpZPassBack  : DV(gl[args.stencilPassOpZPassBack],  gl.KEEP),
-            stencilMaskFront        : DV(args.stencilMaskFront,            0xFFFFFFFF),
-            stencilReferenceFront   : DV(args.stencilReferenceFront,       0),
-            stencilFunctionFront    : DV(gl[args.stencilFunctionFront],    gl.ALWAYS),
-            stencilFailOpFront      : DV(gl[args.stencilFailOpFront],      gl.KEEP),
-            stencilPassZFailOpFront : DV(gl[args.stencilPassZFailOpFront], gl.KEEP),
-            stencilPassZPassOpFront : DV(gl[args.stencilPassZPassOpFront], gl.KEEP)
-        };
-    };
-
-    /// Applies new stencil mask values.
-    /// @param front The stencil mask to apply for front-facing triangles.
-    /// @param back The stencil mask to apply for back-facing triangles.
-    /// @return The GLContext.
-    GLContext.prototype.applyStencilMask = function (front, back)
-    {
-        var gl      = this.gl;
-        var state   = this.activeDepthStencilState;
-        if (front !== undefined && back === undefined)
-            back    = front;
-        if (state.stencilMaskBack !== back)
-        {
-            gl.stencilMaskSeparate(gl.BACK, back);
-            state.stencilMaskBack   = back;
-        }
-        if (state.stencilMaskFront !== front)
-        {
-            gl.stencilMaskSeparate(gl.FRONT, front);
-            state.stencilMaskFront  = front;
-        }
-        return this;
-    };
-
-    /// Applies a depth and stencil buffer state configuration.
-    /// @param newState A state object as returned by the function
-    /// @a GLContext.createDepthStencilState().
-    /// @return The GLContext.
-    GLContext.prototype.applyDepthStencilState = function (newState)
-    {
-        var gl          = this.gl;
-        var n_d_writes  = newState.depthWriteEnabled;
-        var n_d_test    = newState.depthTestEnabled;
-        var n_d_func    = newState.depthTestFunction;
-        var n_s_test    = newState.stencilTestEnabled;
-        var n_s_ref_b   = newState.stencilReferenceBack;
-        var n_s_mask_b  = newState.stencilMaskBack;
-        var n_s_func_b  = newState.stencilFunctionBack;
-        var n_s_op_ff_b = newState.stencilFailOpBack;
-        var n_s_op_pf_b = newState.stencilPassOpZFailBack;
-        var n_s_op_pp_b = newState.stencilPassOpZPassBack;
-        var n_s_ref_f   = newState.stencilReferenceFront;
-        var n_s_mask_f  = newState.stencilMaskFront;
-        var n_s_func_f  = newState.stencilFunctionFront;
-        var n_s_op_ff_f = newState.stencilFailOpFront;
-        var n_s_op_pf_f = newState.stencilPassOpZFailFront;
-        var n_s_op_pp_f = newState.stencilPassOpZPassFront;
-        var state       = this.activeDepthStencilState;
-
-        // depth buffer states.
-        if (state.depthWriteEnabled !== n_d_writes)
-        {
-            gl.depthMask(n_d_writes);
-            state.depthWriteEnabled = n_d_writes;
-        }
-        if (state.depthTestEnabled !== n_d_test)
-        {
-            if (n_d_test) gl.enable (gl.DEPTH_TEST);
-            else          gl.disable(gl.DEPTH_TEST);
-            state.depthTestEnable  = n_d_test;
-        }
-        if (state.depthTestFunction !== n_d_func)
-        {
-            gl.depthFunc(n_d_func);
-            state.depthTestFunction = n_d_func;
-        }
-
-        // stencil buffer states (general).
-        if (state.stencilTestEnabled !== n_s_test)
-        {
-            if (n_s_test) gl.enable (gl.STENCIL_TEST);
-            else          gl.disable(gl.STENCIL_TEST);
-            state.stencilTestEnabled = n_s_test;
-        }
-
-        // stencil buffer states (back).
-        if (state.stencilMaskBack      !== n_s_mask_b ||
-            state.stencilReferenceBack !== n_s_ref_b  ||
-            state.stencilFunctionBack  !== n_s_func_b)
-        {
-            gl.stencilFuncSeparate(gl.BACK,n_s_func_b, n_s_ref_b, n_s_mask_b);
-            state.stencilMaskBack        = n_s_mask_b;
-            state.stencilReferenceBack   = n_s_ref_b;
-            state.stencilFunctionBack    = n_s_func_b;
-        }
-        if (state.stencilFailOpBack      !== n_s_op_ff_b ||
-            state.stencilPassOpZFailBack !== n_s_op_pf_b ||
-            state.stencilPassOpZPassBack !== n_s_op_pp_b)
-        {
-            gl.stencilOpSeparate(gl.BACK,  n_s_op_ff_b, n_s_op_pf_b, n_s_op_pp_b);
-            state.stencilFailOpBack      = n_s_op_ff_b;
-            state.stencilPassOpZFailBack = n_s_op_pf_b;
-            state.stencilPassOpZPassBack = n_s_op_pp_b;
-        }
-
-        // stencil buffer states (front).
-        if (state.stencilMaskFront      !== n_s_mask_f ||
-            state.stencilReferenceFront !== n_s_ref_f  ||
-            state.stencilFunctionFront  !== n_s_func_f)
-        {
-            gl.stencilFuncSeparate(gl.FRONT,n_s_func_f, n_s_ref_f, n_s_mask_f);
-            state.stencilMaskFront        = n_s_mask_f;
-            state.stencilReferenceFront   = n_s_ref_f;
-            state.stencilFunctionFront    = n_s_func_f;
-        }
-        if (state.stencilFailOpFront      !== n_s_op_ff_f ||
-            state.stencilPassOpZFailFront !== n_s_op_pf_f ||
-            state.stencilPassOpZPassFront !== n_s_op_pp_f)
-        {
-            gl.stencilOpSeparate(gl.FRONT,   n_s_op_ff_f, n_s_op_pf_f, n_s_op_pp_f);
-            state.stencilFailOpBFront      = n_s_op_ff_f;
-            state.stencilPassOpZFailBFront = n_s_op_pf_f;
-            state.stencilPassOpZPassBFront = n_s_op_pp_f;
-        }
-        return this;
-    };
-
-    /// Creates a mutable state object representing rasterizer state.
-    /// For information on the offsetFactor and offsetUnits fields, see:
-    /// http://www.opengl.org/archives/resources/faq/technical/polygonoffset.htm
-    /// For information on the invertCoverage and converageValue fields, see:
-    /// http://www.khronos.org/opengles/sdk/1.1/docs/man/glSampleCoverage.xml
-    /// @param args An object specifying initial state values. This object has
-    /// the same set of fields as the object returned by the function. Any
-    /// unspecified values are set to the default.
-    /// @return An object representing the default rasterizer state.
-    /// obj.colorWriteRGBA An array of four boolean values indicating whether
-    /// the color buffer will be updated for each respective channel.
-    /// obj.cullingEnabled true to enable back-face culling.
-    /// obj.cullFace One of the CullFaceMode values.
-    /// obj.windingOrder One of the FrontFaceDirection values.
-    /// obj.scissorTestEnabled true to enable scissor testing.
-    /// obj.scissorX The x-coord of the upper-left corner of the scissor rect.
-    /// obj.scissorY The y-coord of the upper-left corner of the scissor rect.
-    /// obj.scissorWidth The width of the scissor rectangle.
-    /// obj.scissorHeight The height of the scissor rectangle.
-    /// obj.lineWidth The width to use when rendering antialised lines.
-    /// obj.offsetFactor The polygon offset factor. See comment above.
-    /// obj.offsetUnits The polygon offset units. See comment above.
-    /// obj.sampleCoverageEnabled true to enable sample coverage.
-    /// obj.sampleAlphaToCoverage true to enable sample alpha-to-coverage.
-    /// obj.invertCoverage true to invert sample coverage. See comment above.
-    /// obj.coverageValue The alpha coverage value. See comment above.
-    GLContext.prototype.createRasterState = function (args)
-    {
-        var gl = this.gl;
-        var DV = defaultValue;
-        args   = args || {};
-        return {
-            colorWriteRGBA        : DV(args.colorWriteRGBA,        [true, true, true, true]),
-            cullingEnabled        : DV(args.cullingEnabled,         false),
-            cullFace              : DV(gl[args.cullFace],           gl.BACK),
-            windingOrder          : DV(gl[args.windingOrder],       gl.CCW),
-            scissorTestEnabled    : DV(args.scissorTestEnabled,     false),
-            scissorX              : DV(args.scissorX,               0),
-            scissorY              : DV(args.scissorY,               0),
-            scissorWidth          : DV(args.scissorWidth,           0),
-            scissorHeight         : DV(args.scissorHeight,          0),
-            lineWidth             : DV(args.lineWidth,              1.0),
-            offsetFactor          : DV(args.offsetFactor,           0.0),
-            offsetUnits           : DV(args.offsetUnits,            0.0),
-            sampleCoverageEnabled : DV(args.sampleCoverageEnabled,  false),
-            sampleAlphaToCoverage : DV(args.sampleAlphaToCoverage,  false),
-            invertCoverage        : DV(args.invertCoverage,         false),
-            coverageValue         : DV(args.coverageValue,          1.0)
-        };
-    };
-
-    /// Applies a raster state configuration.
-    /// @param newState A state object as returned by the function
-    /// @a GLContext.createRasterState().
-    /// @return The GLContext.
-    GLContext.prototype.applyRasterState = function (newState)
-    {
-        var gl          = this.gl;
-        var n_culling   = newState.cullingEnabled;
-        var n_cullface  = newState.cullFace;
-        var n_winding   = newState.windingOrder;
-        var n_scissor   = newState.scissorTestEnabled;
-        var n_scissor_x = newState.scissorX;
-        var n_scissor_y = newState.scissorY;
-        var n_scissor_w = newState.scissorWidth;
-        var n_scissor_h = newState.scissorHeight;
-        var n_po_f      = newState.offsetFactor;
-        var n_po_u      = newState.offsetUnits;
-        var n_sc        = newState.sampleCoverageEnabled;
-        var n_sac       = newState.sampleAlphaToCoverage;
-        var n_inv_c     = newState.invertCoverage;
-        var n_cv        = newState.converageValue;
-        var n_width     = newState.lineWidth;
-        var state       = this.activeRasterState;
-
-        // states related to back-face culling.
-        if (state.cullingEnabled !== n_culling)
-        {
-            if (n_culling) gl.enable (gl.CULL_FACE);
-            else           gl.disable(gl.CULL_FACE);
-            state.cullingEnabled = n_culling;
-        }
-        if (state.cullFace !== n_cullface)
-        {
-            gl.cullFace(n_cullface);
-            state.cullFace = n_cullface;
-        }
-        if (state.windingOrder !== n_winding)
-        {
-            gl.frontFace(n_winding);
-            state.windingOrder = n_winding;
-        }
-
-        // states related to scissor testing.
-        if (state.scissorTestEnabled !== n_scissor)
-        {
-            if (n_scissor) gl.enable (gl.SCISSOR_TEST);
-            else           gl.disable(gl.SCISSOR_TEST);
-            state.scissorTestEnabled = n_scissor;
-        }
-        if (state.scissorX      !== n_scissor_x ||
-            state.scissorY      !== n_scissor_y ||
-            state.scissorWidth  !== n_scissor_w ||
-            state.scissorHeight !== n_scissor_h)
-        {
-            gl.scissor(n_scissor_x, n_scissor_y, n_scissor_w, n_scissor_h);
-            state.scissorX      = n_scissor_x;
-            state.scissorY      = n_scissor_y;
-            state.scissorWidth  = n_scissor_w;
-            state.scissorHeight = n_scissor_h;
-        }
-
-        // states related to polygon offset.
-        if (state.offsetFactor !== n_po_f || state.offsetUnits !== n_po_u)
-        {
-            gl.polygonOffset(n_po_f, n_po_u);
-            state.offsetFactor = n_po_f;
-            state.offsetUnits  = n_po_u;
-        }
-
-        // states related to multisample coverage.
-        if (state.sampleCoverageEnabled !== n_sc)
-        {
-            if (n_sc)  gl.enable (gl.SAMPLE_COVERAGE);
-            else       gl.disable(gl.SAMPLE_COVERAGE);
-            state.sampleCoverageEnabled = n_sc;
-        }
-        if (state.sampleAlphaToCoverage !== n_sac)
-        {
-            if (n_sac) gl.enable (gl.SAMPLE_ALPHA_TO_COVERAGE);
-            else       gl.disable(gl.SAMPLE_ALPHA_TO_COVERAGE);
-            state.sampleAlphaToCoverage = n_sac;
-        }
-        if (state.invertCoverage !== n_inv_c || state.coverageValue !== n_cv)
-        {
-            gl.sampleCoverage(n_cv, n_inv_c);
-            state.invertCoverage =  n_inv_c;
-            state.coverageValue  =  n_cv;
-        }
-
-        // states related to antialiased line width.
-        if (state.lineWidth !== n_width)
-        {
-            gl.lineWidth(n_width);
-            state.lineWidth = n_width;
-        }
-
-        // states related to color buffer write masks.
-        var n_write_r = newState.colorWriteRGBA[0];
-        var n_write_g = newState.colorWriteRGBA[1];
-        var n_write_b = newState.colorWriteRGBA[2];
-        var n_write_a = newState.colorWriteRGBA[3];
-        if (state.colorWriteRGBA[0] !== n_write_r ||
-            state.colorWriteRGBA[1] !== n_write_g ||
-            state.colorWriteRGBA[2] !== n_write_b ||
-            state.colorWriteRGBA[3] !== n_write_a)
-        {
-            gl.colorMask(n_write_r, n_write_g, n_write_b, n_write_a);
-            state.colorWriteRGBA[0] = n_write_r;
-            state.colorWriteRGBA[1] = n_write_g;
-            state.colorWriteRGBA[2] = n_write_b;
-            state.colorWriteRGBA[3] = n_write_a;
-        }
-        return this;
-    };
-
-    /// Sets the active scissor rectangle.
-    /// @param x The x-coordinate of the upper-left corner.
-    /// @param y The y-coordinate of the upper-left corner.
-    /// @param width The width of the scissor region.
-    /// @param height The height of the scissor region.
-    GLContext.prototype.applyScissorRegion = function (x, y, width, height)
-    {
-        var gl    = this.gl;
-        var state = this.activeRasterState;
-        if (state.scissorX      !== x     ||
-            state.scissorY      !== y     ||
-            state.scissorWidth  !== width ||
-            state.scissorHeight !== height)
-        {
-            gl.scissor(x, y, width, height);
-            state.scissorX      = x;
-            state.scissorY      = y;
-            state.scissorWidth  = width;
-            state.scissorHeight = height;
-        }
-        return this;
-    };
-
-    /// Enables or disables writes to the color and depth buffers.
-    /// @param color A boolean value specifying whether writes to the color
-    /// buffer are enabled. This value is applied to all color channels.
-    /// @param depth A boolean value specifying whether writes to the depth
-    /// buffer are enabled.
-    /// @return The GLContext.
-    GLContext.prototype.applyWriteMasks = function (color, depth)
-    {
-        var gl    = this.gl;
-        var state = this.activeRasterState;
-        if (state.colorWriteRGBA[0] !== color ||
-            state.colorWriteRGBA[1] !== color ||
-            state.colorWriteRGBA[2] !== color ||
-            state.colorWriteRGBA[3] !== color)
-        {
-            gl.colorMask(color, color, color, color);
-            state.colorWriteRGBA[0]  = color;
-            state.colorWriteRGBA[1]  = color;
-            state.colorWriteRGBA[2]  = color;
-            state.colorWriteRGBA[3]  = color;
-        }
-        if (this.activeDepthStencilState.depthWriteEnabled !== depth)
-        {
-            gl.depthMask(depth);
-            this.activeDepthStencilState.depthWriteEnabled = depth;
-        }
-        return this;
-    };
-
-    /// Selects a texture unit as the target of subsequent texture bind
-    /// operations and during shader uniform binding of texture samplers.
-    /// @param unit The zero-based index of the texture unit to select.
-    /// @return The GLContext.
-    GLContext.prototype.useTextureUnit = function (unit)
-    {
-        var gl = this.gl;
-        if (this.activeTextureIndex !== unit)
-        {
-            gl.activeTexture(gl[texture_slots[unit]]);
-            this.activeTextureIndex = unit;
-        }
-        return this;
-    };
-
-    /// Binds a texture to the currently active texture unit.
-    /// @param proxy The texture object to select for modification or use. See
-    /// @a GLContext.createTextureProxy().
-    /// @return The GLContext.
-    GLContext.prototype.useTexture = function (proxy)
-    {
-        var gl   = this.gl;
-        var unit = this.activeTextureIndex;
-        if (this.activeTextures[unit] !== proxy)
-        {
-            gl.bindTexture(proxy.bindTarget, proxy.textureResource);
-            this.activeTextures[unit] = proxy;
-        }
-        return this;
-    };
-
-    /// Selects a shader program for use in subsequent draw calls.
-    /// @param proxy The program object to select for modification or use. See
-    /// @a GLContext.createProgramProxy().
-    /// @return The GLContext.
-    GLContext.prototype.useProgram = function (proxy)
-    {
-        if (this.activeProgram !== proxy)
-        {
-            var gl = this.gl;
-            gl.useProgram(proxy.programResource);
-            this.activeProgram = proxy;
-        }
-        return this;
-    };
-
-    /// Selects an array buffer or element array buffer for use in subsequent
-    /// draw calls.
-    /// @param proxy The buffer object to select for modification or use. See
-    /// @a GLContext.createBufferProxy().
-    /// @return The GLContext.
-    GLContext.prototype.useBuffer = function (proxy)
-    {
-        var gl = this.gl;
-        if (gl.ARRAY_BUFFER        === proxy.bindTarget &&
-            this.activeArrayBuffer !== proxy)
-        {
-            gl.bindBuffer(gl.ARRAY_BUFFER, proxy.bufferResource);
-            this.activeArrayBuffer = proxy;
-        }
-        if (gl.ELEMENT_ARRAY_BUFFER  === proxy.bindTarget &&
-            this.activeElementBuffer !== proxy)
-        {
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, proxy.bufferResource);
-            this.activeElementBuffer = proxy;
-        }
-        return this;
-    };
-
-    /// Unbinds the active array buffer or element array buffer.
-    /// @param target One of gl.ARRAY_BUFFER or gl.ELEMENT_ARRAY_BUFFER.
-    /// @return The GLContext.
-    GLContext.prototype.unbindBuffer = function (target)
-    {
-        var gl = this.gl;
-        if (gl.ARRAY_BUFFER === target && this.activeArrayBuffer)
-        {
-            gl.bindBuffer(gl.ARRAY_BUFFER, null);
-            this.activeArrayBuffer = null;
-            return this;
-        }
-        if (gl.ELEMENT_ARRAY_BUFFER === target && this.activeElementBuffer)
-        {
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-            this.activeElementBuffer = null;
-            return this;
-        }
-        return this;
-    };
-
-    /// Unbinds the active shader program.
-    /// @return The GLContext.
-    GLContext.prototype.unbindProgram = function ()
-    {
-        if (this.activeProgram !== null)
-        {
-            var gl = this.gl;
-            gl.useProgram(null);
-            this.activeProgram = null;
-        }
-        return this;
-    };
-
-    /// Unbinds the texture bound to the active texture unit.
-    /// @return The GLContext.
-    GLContext.prototype.unbindTexture = function ()
-    {
-        var unit = this.activeTextureIndex;
-        if (this.activeTextures[unit])
-        {
-            var gl  = this.gl;
-            gl.bindTexture(gl.TEXTURE_2D, null);
-            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
-            this.activeTextures[unit] = null;
-        }
-    };
-
-    /// Unbinds all textures from all active texture units.
-    /// @return The GLContext.
-    GLContext.prototype.unbindAllTextures = function ()
-    {
-        var gl     = this.gl;
-        var t2d    = gl.TEXTURE_2D;
-        var tcm    = gl.TEXTURE_CUBE_MAP;
-        var slots  = texture_slots;
-        var unbind = false;
-        for (var i = 0, n = this.activeTextures.length; i < n; ++i)
-        {
-            if (this.activeTextures[i])
-            {
-                gl.activeTexture(gl[slots[i]]);
-                gl.bindTexture(t2d, null);
-                gl.bindTexture(tcm, null);
-                this.activeTextures[i] = null;
-                unbind = true;
-            }
-        }
-        if (unbind)
-        {
-            this.activeTextureIndex = 0;
-            gl.activeTexture(gl.TEXTURE0);
-        }
-        if (this.activeProgram)
-        {
-            // reset state for the active program.
-            this.activeProgram.boundTextureCount = 0;
-        }
-        return this;
-    };
-
-    /// Creates a shader program proxy object, which stores metadata associated
-    /// with a paired vertex and fragment shader, as well as the underlying
-    /// WebGL resources. This function may be called from any thread.
-    /// @return A new shader program proxy object. WebGL resources must be
-    /// initialized separately.
-    GLContext.prototype.createProgramProxy = function ()
-    {
-        return {
-            id                     : 0,    /* object list id        */
-            programResource        : null, /* WebGLProgram instance */
-            vertexShaderResource   : null, /* WebGLShader instance  */
-            fragmentShaderResource : null, /* WebGLShader instance  */
-            webglContext           : this, /* WebGLRenderingContext */
-            boundTextureCount      : 0,
-            uniformNames           : [],
-            uniformTypes           : {},
-            uniformLocations       : {},
-            attributeNames         : [],
-            attributeTypes         : {},
-            attributeIndices       : {},
-        };
-    };
-
-    /// Deletes a shader program proxy object. WebGL resources must be deleted
-    /// separately. This function may be called from any thread.
-    /// @param proxy The shader program proxy object as returned by the
-    /// function @a GLContext.createProgramProxy().
-    /// @return The GLContext.
-    GLContext.prototype.deleteProgramProxy = function (proxy)
-    {
-        if (proxy)
-        {
-            // release references held by the shader program object.
-            proxy.programResource        = null;
-            proxy.vertexShaderResource   = null;
-            proxy.fragmentShaderResource = null;
-            proxy.webglContext           = null;
-            proxy.uniformNames           = null;
-            proxy.uniformTypes           = null;
-            proxy.uniformLocations       = null;
-            proxy.attributeNames         = null;
-            proxy.attributeTypes         = null;
-            proxy.attributeIndices       = null;
-            proxy.boundTextureCount      = 0;
-        }
-        return this;
-    };
-
-    /// Creates the WebGL resources associated with a shader program by
-    /// compiling a vertex shader and fragment shader and linking them into
-    /// a complete shader program. This function can only be called from the
-    /// main UI thread.
-    /// @param proxy The shader program proxy object as returned by the
-    /// function @a GLContext.createProgramProxy().
-    /// @param vss A string specifying the vertex shader source code.
-    /// @param fss A string specifying the fragment shader source code.
-    /// @return true if compiling and linking completed successfully.
-    GLContext.prototype.createProgramResource = function (proxy, vss, fss)
-    {
-        if (proxy && proxy.webglContext === this)
-        {
-            var gl = proxy.webglContext.gl;
-            var vs = gl.createShader(gl.VERTEX_SHADER);
-            var fs = gl.createShader(gl.FRAGMENT_SHADER);
-
-            // attempt to compile the vertex shader:
-            gl.shaderSource (vs, vss);
-            gl.compileShader(vs);
-            if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS) &&
-                !gl.isContextLost())
-            {
-                var log   = gl.getShaderInfoLog(vs);
-                var stage = BuildStage.COMPILE_VS;
-                gl.deleteShader(fs);
-                gl.deleteShader(vs);
-                this.emit('compile:error', this, stage, vss, log);
-                return false;
-            }
-
-            // attempt to compile the fragment shader:
-            gl.shaderSource (fs, fss);
-            gl.compileShader(fs);
-            if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS) &&
-                !gl.isContextLost())
-            {
-                var log   = gl.getShaderInfoLog(fs);
-                var stage = BuildStage.COMPILE_FS;
-                gl.deleteShader(fs);
-                gl.deleteShader(vs);
-                this.emit('compile:error', this, stage, fss, log);
-                return false;
-            }
-
-            var reflectUniforms = function ()
-                {
-                    var uMatch = /uniform\s+(\w+)\s+(\w+)\s*;/g
-                    var uVert  = vss.match(uMatch);
-                    var uFrag  = fss.match(uMatch);
-                    if (uVert)
-                    {
-                        for (var i = 0; i < uVert.length; ++i)
-                        {
-                            var uniform   = uVert[i].split(uMatch);
-                            var uType     = uniform[1];
-                            var uName     = uniform[2];
-                            proxy.uniformNames.push(uName);
-                            proxy.uniformTypes[uName] = uType;
-                        }
-                    }
-                    if (uFrag)
-                    {
-                        // uniforms from the fragment shader.
-                        for (var i = 0; i < uFrag.length; ++i)
-                        {
-                            var uniform   = uFrag[i].split(uMatch);
-                            var uType     = uniform[1];
-                            var uName     = uniform[2];
-                            proxy.uniformNames.push(uName);
-                            proxy.uniformTypes[uName] = uType;
-                        }
-                    }
-                };
-
-            var reflectAttributes = function ()
-                {
-                    var aMatch = /attribute\s+(\w+)\s+(\w+)\s*;/g
-                    var aVert  = vss.match(aMatch);
-                    if (aVert)
-                    {
-                        for (var i = 0; i < aVert.length; ++i)
-                        {
-                            var attrib    = aVert[i].split(aMatch);
-                            var aType     = attrib[1];
-                            var aName     = attrib[2];
-                            proxy.attributeNames.push(aName);
-                            proxy.attributeTypes[aName] = aType;
-                        }
-                    }
-                };
-
-            // create the shader program representing the VS/FS combination.
-            var po = gl.createProgram();
-            gl.attachShader(po, vs);
-            gl.attachShader(po, fs);
-
-            // bind the vertex attribute locations (pre-link.)
-            reflectAttributes();
-            for (var i = 0; i < proxy.attributeNames.length; ++i)
-            {
-                var an = proxy.attributeNames[i];
-                proxy.attributeIndices[an] =  i;
-                gl.bindAttribLocation(po, i, an);
-            }
-
-            // link the shader program object.
-            gl.linkProgram(po);
-            if (!gl.getProgramParameter(po, gl.LINK_STATUS) &&
-                !gl.isContextLost())
-            {
-                var log   = gl.getProgramInfoLog(po);
-                var stage = BuildStage.LINK_PROGRAM;
-                gl.detachShader (po, fs);
-                gl.detachShader (po, vs);
-                gl.deleteProgram(po);
-                gl.deleteShader (fs);
-                gl.deleteShader (vs);
-                this.emit('linker:error', this, stage, vss+'\n\n'+fss, log);
-                return false;
-            }
-
-            // retrieve the bind locations of each uniform (post-link.)
-            reflectUniforms();
-            for (var i = 0; i < proxy.uniformNames.length; ++i)
-            {
-                var un = proxy.uniformNames[i];
-                proxy.uniformLocations[un] = gl.getUniformLocation(po, un);
-            }
-            proxy.programResource          = po;
-            proxy.vertexShaderResource     = vs;
-            proxy.fragmentShaderResource   = fs;
-            this.useProgram(proxy);
-            return true;
-        }
-        return false;
-    };
-
-    /// Deletes the WebGL resources associated with a shader program. This
-    /// function can only be called on the main UI thread.
-    /// @param proxy The shader program proxy object as returned by the
-    /// function @a GLContext.createProgramProxy().
-    /// @return The GLContext.
-    GLContext.prototype.deleteProgramResource = function (proxy)
-    {
-        if (proxy && proxy.webglContext === this)
-        {
-            if (this.activeProgram === proxy)
-                this.unbindProgram();
-
-            var gl = proxy.webglContext.gl;
-            gl.detachShader(proxy.programResource, proxy.fragmentShaderResource);
-            gl.detachShader(proxy.programResource, proxy.vertexShaderResource);
-            gl.deleteShader(proxy.fragmentShaderResource);
-            gl.deleteShader(proxy.vertexShaderResource);
-            gl.deleteProgram(proxy.programResource);
-            proxy.programResource        = null;
-            proxy.vertexShaderResource   = null;
-            proxy.fragmentShaderResource = null;
-        }
-        return this;
-    };
-
-    /// Sets the value of a uniform variable in the active shader program.
-    /// @param name The name of the uniform to set.
-    /// @param value The value to set.
-    /// @return The GLContext.
-    GLContext.prototype.setUniform = function (name, value)
-    {
-        if (!this.activeProgram)
-            return this;
-
-        var     gl     = this.gl;
-        var     glsl   = TypeNames;
-        var     shader = this.activeProgram;
-        var     bind   = shader.uniformLocations[name];
-        var     type   = shader.uniformTypes[name];
-        switch (type)
-        {
-            case glsl.VEC4:
-                gl.uniform4fv(bind, value);
-                break;
-            case glsl.MAT4:
-                gl.uniformMatrix4fv(bind, false, value);
-                break;
-            case glsl.SAMPLER_2D:
-                gl.activeTexture(gl[TextureSlots[shader.boundTextureCount]]);
-                gl.bindTexture(gl.TEXTURE_2D, value.textureResource);
-                gl.uniform1i(bind, shader.boundTextureCount);
-                shader.boundTextureCount++;
-                break;
-            case glsl.VEC3:
-                gl.uniform3fv(bind, value);
-                break;
-            case glsl.VEC2:
-                gl.uniform2fv(bind, value);
-                break;
-            case glsl.FLOAT:
-                gl.uniform1f(bind, value);
-                break;
-            case glsl.SAMPLER_CUBE:
-                gl.activeTexture(gl[TextureSlots[shader.boundTextureCount]]);
-                gl.bindTexture(gl.TEXTURE_CUBE_MAP, value.textureResource);
-                gl.uniform1i(bind, shader.boundTextureCount);
-                shader.boundTextureCount++;
-                break;
-            case glsl.MAT3:
-                gl.uniformMatrix3fv(bind, false, value);
-                break;
-            case glsl.MAT2:
-                gl.uniformMatrix2fv(bind, false, value);
-                break;
-            case glsl.INT:
-                gl.uniform1i(bind, value);
-                break;
-            case glsl.IVEC4:
-                gl.uniform4iv(bind, value);
-                break;
-            case glsl.IVEC3:
-                gl.uniform3iv(bind, value);
-                break;
-            case glsl.IVEC2:
-                gl.uniform2iv(bind, value);
-                break;
-            case glsl.BOOL:
-                gl.uniform1i (bind, value);
-                break;
-            case glsl.BVEC4:
-                gl.uniform4iv(bind, value);
-                break;
-            case glsl.BVEC3:
-                gl.uniform3iv(bind, value);
-                break;
-            case glsl.BVEC2:
-                gl.uniform2iv(bind, value);
-                break;
-        }
-        return this;
-    };
-
-    /// Creates a texture proxy object, which stores metadata associated
-    /// with a texture object, as well as the underlying WebGL resources.
-    /// This function may be called from any thread.
-    /// @return A new texture proxy object. WebGL resources must be initialized
-    /// separately on the main UI thread.
-    GLContext.prototype.createTextureProxy = function ()
-    {
-        return {
-            id              : 0,     /* object list id                */
-            textureResource : null,  /* WebGLTexture instance         */
-            webglContext    : this,  /* WebGLRenderingContext         */
-            hasMipmaps      : false, /* texture has a mip-chain?      */
-            userType        : '',    /* 'COLOR', etc. user-defined    */
-            bindTarget      : 0,     /* gl.TEXTURE_2D, etc.           */
-            textureTarget   : 0,     /* gl.TEXTURE_2D, etc.           */
-            format          : 0,     /* gl.RGBA, etc.                 */
-            dataType        : 0,     /* gl.UNSIGNED_BYTE, etc.        */
-            wrapModeS       : 0,     /* gl.CLAMP_TO_EDGE, etc.        */
-            wrapModeT       : 0,     /* gl.CLAMP_TO_EDGE, etc.        */
-            magnifyFilter   : 0,     /* gl.LINEAR, etc.               */
-            minifyFilter    : 0,     /* gl.LINEAR_MIPMAP_LINEAR, etc. */
-            levels          : []     /* mipmap level dimensions       */
-        };
-    };
-
-    /// Deletes a texture proxy object. WebGL resources must be deleted
-    /// separately. This function may be called from any thread.
-    /// @param proxy The texture proxy object as returned by the function
-    /// @a GLContext.createTextureProxy().
-    /// @return The GLContext.
-    GLContext.prototype.deleteTextureProxy = function (proxy)
-    {
-        if (proxy)
-        {
-            // release references held by the texture object.
-            proxy.textureResource = null;
-            proxy.webglContext    = null;
-            proxy.userType        = null;
-            proxy.levels          = null;
-            proxy.bindTarget      = 0;
-            proxy.textureTarget   = 0;
-            proxy.format          = 0;
-            proxy.dataType        = 0;
-            proxy.wrapModeS       = 0;
-            proxy.wrapModeT       = 0;
-            proxy.magnifyFilter   = 0;
-            proxy.minifyFilter    = 0;
-        }
-        return this;
-    };
-
-    /// Creates a texture resource. The contents of the texture are initialized
-    /// to transparent black. Use the uploadTexture() or uploadTextureRegion()
-    /// functions to specify image data.
-    /// @param proxy The texture proxy object as returned by the function
-    /// @a GLContext.createTextureProxy().
-    /// @param args An object specifying texture attributes. All are required.
-    /// @param args.type A string value specifying a user-defined texture type
-    /// attribute. This typically describes the usage of the texture, for
-    /// example, 'COLOR' for a texture containing color data, 'NORMAL' for a
-    /// normal map texture, and so on.
-    /// @param args.target A value specifying the texture target: TEXTURE_2D,
-    /// TEXTURE_CUBE_MAP_POSITIVE_[X,Y,Z] or TEXTURE_CUBE_MAP_NEGATIVE_[X,Y,Z].
-    /// @param args.format A value specifying the texture type. May be one of
-    /// ALPHA, LUMINANCE, LUMINANCE_ALPHA, RGB or RGBA.
-    /// @param args.dataType A value specifying the format of the texture data.
-    /// One of UNSIGNED_BYTE, UNSIGNED_SHORT_5_6_5, UNSIGNED_SHORT_4_4_4_4,
-    /// UNSIGNED_SHORT_5_5_5_1, HALF_FLOAT_OES or FLOAT.
-    /// @param args.wrapS A value specifying the wrapping mode to use in the
-    /// horizontal direction. One of REPEAT, CLAMP_TO_EDGE or MIRRORED_REPEAT.
-    /// @param args.wrapT A value specifying the wrapping mode to use in the
-    /// vertical direction. One of REPEAT, CLAMP_TO_EDGE or MIRRORED_REPEAT.
-    /// @param args.magFilter A value specifying the filter to use when the
-    /// texture is magnified. One of NEAREST or LINEAR.
-    /// @param args.minFilter A value specifying the filter to use when the
-    /// texture is minified. One of NEAREST, LINEAR, NEAREST_MIPMAP_NEAREST,
-    /// LINEAR_MIPMAP_NEAREST, NEAREST_MIPMAP_LINEAR or LINEAR_MIPMAP_LINEAR.
-    /// @param args.hasMipmaps A boolean value specifying whether the texture
-    /// has an associated mip-chain.
-    /// @param args.levels An array of objects describing each level in the
-    /// mipmap chain. Level 0 represents the highest-resolution image. Each
-    /// level object has width, height, byteSize and byteOffset fields.
-    /// @return true if the texture resource is created successfully.
-    GLContext.prototype.createTextureResource = function (proxy, args)
-    {
-        var gl              = this.gl;
-        var textureTarget   = gl[args.target];
-        var bindTarget      = gl[args.target];
-        if (bindTarget    === gl.TEXTURE_CUBE_MAP_POSITIVE_X ||
-            bindTarget    === gl.TEXTURE_CUBE_MAP_POSITIVE_Y ||
-            bindTarget    === gl.TEXTURE_CUBE_MAP_POSITIVE_Z ||
-            bindTarget    === gl.TEXTURE_CUBE_MAP_NEGATIVE_X ||
-            bindTarget    === gl.TEXTURE_CUBE_MAP_NEGATIVE_Y ||
-            bindTarget    === gl.TEXTURE_CUBE_MAP_NEGATIVE_Z)
-            bindTarget      = gl.TEXTURE_CUBE_MAP;
-
-        // create the texture resource and cache various attributes.
-        var resource   = gl.createTexture();
-        if (resource === null)
-        {
-            // likely the context is lost.
-            return false;
-        }
-        proxy.webglContext    = gl;
-        proxy.textureResource = gl.createTexture();
-        proxy.hasMipmaps      = args.hasMipmaps;
-        proxy.userType        = args.type;
-        proxy.bindTarget      = bindTarget;
-        proxy.textureTarget   = textureTarget;
-        proxy.format          = gl[args.format];
-        proxy.dataType        = gl[args.dataType];
-        proxy.wrapModeS       = gl[args.wrapS];
-        proxy.wrapModeT       = gl[args.wrapT];
-        proxy.magnifyFilter   = gl[args.magFilter];
-        proxy.minifyFilter    = gl[args.minFilter];
-        proxy.levels          = new Array(args.levels.length);
-        for (var i = 0,  n  = args.levels.length; i < n; ++i)
-        {
-            proxy.levels[i]   = {
-                width       : args.levels[i].width,
-                height      : args.levels[i].height,
-                byteSize    : args.levels[i].byteSize,
-                byteOffset  : args.levels[i].byteOffset
-            };
-        }
-
-        // bind the texture and set GL attributes.
-        gl.bindTexture  (bindTarget, proxy.textureResource);
-        gl.texParameteri(bindTarget, gl.TEXTURE_WRAP_S,     proxy.wrapModeS);
-        gl.texParameteri(bindTarget, gl.TEXTURE_WRAP_T,     proxy.wrapModeT);
-        gl.texParameteri(bindTarget, gl.TEXTURE_MIN_FILTER, proxy.minifyFilter);
-        gl.texParameteri(bindTarget, gl.TEXTURE_MAG_FILTER, proxy.magnifyFilter);
-        this.useTexture (proxy);
-        return true;
-    };
-
-    /// Deletes the WebGL resources associated with a texture. This function
-    /// can only be called on the main UI thread.
-    /// @param proxy The texture proxy object as returned by the function
-    /// @a GLContext.createTextureProxy().
-    /// @return The GLContext.
-    GLContext.prototype.deleteTextureResource = function (proxy)
-    {
-        if (proxy && proxy.webglContext === this)
-        {
-            var unit   = this.activeTextureIndex;
-            var list   = this.activeTextures;
-            var runit  = unit;
-            var bound  = false;
-            for (var i = 0, n = list.length; i < n; ++i)
-            {
-                if (list[i] === proxy)
-                {
-                    this.useTextureUnit(i);
-                    this.unbindTexture();
-                    if (i === unit)
-                    {
-                        // we unbound the active unit.
-                        // select unit zero on return.
-                        runit = 0;
-                    }
-                    bound = true;
-                }
-            }
-            if (bound) this.useTextureUnit(runit);
-
-            var gl = proxy.webglContext.gl;
-            gl.deleteTexture(proxy.textureResource);
-            proxy.textureResource = null;
-        }
-        return this;
-    };
-
-    /// Uploads the complete mip-chain for a texture to the GPU.
-    /// @param data A Uint8Array view storing the raw data for each mip-level.
-    /// @return The GLContext.
-    GLContext.prototype.uploadTexture = function (data)
-    {
-        var  unit    = this.activeTextureIndex;
-        var  proxy   = this.activeTextures[unit];
-        if (!proxy)    return this;
-
-        var  gl      = this.gl;
-        var  buffer  = data.buffer;
-        var  baseOfs = data.byteOffset;
-        var  type    = proxy.dataType;
-        var  format  = proxy.format;
-        var  target  = proxy.textureTarget;
-        // @note: texture should already be bound.
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-        for (var i   = 0, n = proxy.levels.length; i < n; ++i)
-        {
-            var ld   = proxy.levels[i];
-            var lw   = ld.width;
-            var lh   = ld.height;
-            var ofs  = ld.byteOffset + baseOfs;
-            var size = ld.byteSize;
-            var view = null;
-            switch (type)
-            {
-                case gl.UNSIGNED_BYTE:
-                    view = new Uint8Array(buffer, ofs, size);
-                    break;
-                case gl.UNSIGNED_SHORT_5_6_5:
-                case gl.UNSIGNED_SHORT_5_5_5_1:
-                case gl.UNSIGNED_SHORT_4_4_4_4:
-                    view = new Uint16Array(buffer, ofs, size >> 1);
-                    break;
-
-                default: break;
-            }
-            gl.texImage2D(target, i, format, lw, lh, 0, format, type, view);
-        }
-        return this;
-    };
-
-    /// Uploads data to a texture object from a DOM Canvas, Image or Video
-    /// element. Only level 0 of the target texture is modified.
-    /// @param domElement An instance of HTMLImageElement, HTMLCanvasElement
-    /// or HTMLVideoElement specifying the source texture data.
-    /// @return The GLContext.
-    GLContext.prototype.uploadTextureFromDOM = function (domElement)
-    {
-        var  unit    = this.activeTextureIndex;
-        var  proxy   = this.activeTextures[unit];
-        if (!proxy)    return this;
-
-        var  gl      = this.gl;
-        var  type    = proxy.dataType;
-        var  format  = proxy.format;
-        // @note: texture should already be bound.
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-        gl.texImage2D(proxy.textureTarget, 0, format, format, type, domElement);
-        return this;
-    };
-
-    /// Uploads image data to a region of a texture.
-    /// @param tX The x-coordinate (s-coordinate) of the upper-left corner of
-    /// the target rectangle.
-    /// @param tY The y-coordinate (t-coordinate) of the upper-left corner of
-    /// the target rectangle.
-    /// @param tLevel The zero-based index of the target mip-level, where level
-    /// zero represents the highest resolution image.
-    /// @param source An object storing metadata about the source image.
-    /// @param source.levels An array of objects describing each level in the
-    /// mipmap chain. Level 0 represents the highest resolution image. Each
-    /// level object has width, height, byteSize and byteOffset fields.
-    /// @param sLevel The zero-based index of the source mip-level, where level
-    /// zero represents the highest resolution image.
-    /// @param data A Uint8Array view storing the raw data for each mip-level
-    /// of the source image.
-    /// @return The GLContext.
-    GLContext.prototype.uploadTextureRegion = function (tX, tY, tLevel, source, sLevel, data)
-    {
-        var  unit    = this.activeTextureIndex;
-        var  target  = this.activeTextures[unit];
-        if (!target)   return this;
-
-        var  gl      = this.gl;
-        var  tt      = target.textureTarget;
-        var  type    = target.dataType;
-        var  format  = target.format;
-        var  level   = source.levels[sLevel];
-        var  lw      = level.width;
-        var  lh      = level.height;
-        var  ofs     = level.byteOffset + data.byteOffset;
-        var  size    = level.byteSize;
-        var  view    = null;
-        switch (type)
-        {
-            case gl.UNSIGNED_BYTE:
-                view = new Uint8Array(data.buffer, ofs, size);
-                break;
-            case gl.UNSIGNED_SHORT_5_6_5:
-            case gl.UNSIGNED_SHORT_5_5_5_1:
-            case gl.UNSIGNED_SHORT_4_4_4_4:
-                view = new Uint16Array(data.buffer, ofs, size >> 1);
-                break;
-
-            default: break;
-        }
-        // @note: texture should already be bound.
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-        gl.texSubImage2D(tt, tLevel, tX, tY, lw, lh, format, type, view);
-        return this;
-    };
-
-    /// Creates a buffer proxy object, which stores metadata associated
-    /// with a buffer object, as well as the underlying WebGL resources.
-    /// This function may be called from any thread.
-    /// @return A new buffer proxy object. WebGL resources must be initialized
-    /// separately on the main UI thread.
-    GLContext.prototype.createBufferProxy = function ()
-    {
-        return {
-            id             : 0,    /* object list id                     */
-            bufferResource : null, /* WebGLBuffer instance               */
-            webglContext   : this, /* WebGLRenderingContext              */
-            bindTarget     : 0,    /* ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER */
-            usageType      : 0,    /* STATIC_DRAW, STREAM_DRAW, etc.     */
-            totalSize      : 0,    /* total size, specified in bytes     */
-            elementSize    : 0,    /* byte size of a 'vertex' or index   */
-            elementCount   : 0     /* number of vertices or indices      */
-        };
-    };
-
-    /// Deletes a buffer proxy object. WebGL resources must be deleted
-    /// separately. This function may be called from any thread.
-    /// @param proxy The buffer proxy object as returned by the function
-    /// @a GLContext.createBufferProxy().
-    /// @return The GLContext.
-    GLContext.prototype.deleteBufferProxy = function (proxy)
-    {
-        if (proxy)
-        {
-            // release references held by the buffer object.
-            proxy.bufferResource = null;
-            proxy.webglContext   = null;
-            proxy.bindTarget     = 0;
-            proxy.usageType      = 0;
-            proxy.totalSize      = 0;
-            proxy.elementSize    = 0;
-            proxy.elementCount   = 0;
-        }
-        return this;
-    };
-
-    /// Creates the WebGL resources associated with a data buffer. This
-    /// function can only be called from the main UI thread.
-    /// @param proxy The buffer proxy object as returned by the function
-    /// @a GLContext.createBufferProxy().
-    /// @param args An object specifying buffer attributes. All are required.
-    /// @param args.target A value specifying the buffer target: either
-    /// ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER.
-    /// @param args.usage A value specifying the buffer usage type; may be one
-    /// of STATIC_DRAW, STREAM_DRAW or DYNAMIC_DRAW.
-    /// @param args.elementSize The size of a single logical element in bytes.
-    /// @param args.elementCount The total number of logical elements in the
-    /// buffer (the number of vertices or indices).
-    /// @return true if the buffer was created successfully.
-    GLContext.prototype.createBufferResource = function (proxy, args)
-    {
-        if (proxy && proxy.webglContext === this)
-        {
-            var gl = proxy.webglContext.gl;
-            proxy.bufferResource = gl.createBuffer();
-            proxy.bindTarget     = gl[args.target];
-            proxy.usageType      = gl[args.usage];
-            proxy.totalSize      = args.elementSize * args.elementCount;
-            proxy.elementSize    = args.elementSize;
-            proxy.elementCount   = args.elementCount;
-            gl.bindBuffer (proxy.bindTarget, proxy.bufferResource);
-            gl.bufferData (proxy.bindTarget, proxy.totalSize, proxy.usageType);
-            this.useBuffer(proxy);
-            return true;
-        }
-        return false;
-    };
-
-    /// Deletes the WebGL resources associated with a buffer. This function
-    /// can only be called on the main UI thread.
-    /// @param proxy The buffer proxy object as returned by the function
-    /// @a GLContext.createBufferProxy().
-    /// @return The GLContext.
-    GLContext.prototype.deleteBufferResource = function (proxy)
-    {
-        if (proxy && proxy.webglContext  === this)
-        {
-            if (this.activeArrayBuffer   === proxy ||
-                this.activeElementBuffer === proxy)
-                this.unbindBuffer(proxy.bindTarget);
-
-            var gl = proxy.webglContext.gl;
-            gl.deleteBuffer(proxy.bufferResource);
-            proxy.bufferResource = null;
-        }
-        return this;
-    };
-
-    /// Uploads data into an array buffer.
-    /// @param data The data to upload into the buffer. This may be either a
-    /// standard JavaScript array or a typed array.
-    /// @return The GLContext.
-    GLContext.prototype.uploadArrayBufferData = function (data)
-    {
-        if (!this.activeArrayBuffer)
-            return this;
-        var gl   = this.gl;
-        var buf  = this.activeArrayBuffer;
-        gl.bufferData(gl.ARRAY_BUFFER, data, buf.usageType);
-        return this;
-    };
-
-    /// Uploads data into an index buffer.
-    /// @param data The data to upload into the buffer. This may be either a
-    /// standard JavaScript array or a typed array.
-    /// @return The GLContext.
-    GLContext.prototype.uploadIndexBufferData = function (data)
-    {
-        if (!this.activeElementBuffer)
-            return this;
-        var gl   = this.gl;
-        var buf  = this.activeElementBuffer;
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, buf.usageType);
-        return this;
-    };
-
-    /// Uploads data into a region of an array buffer.
-    /// @param byteOffset The byte offset in the array buffer.
-    /// @param data The data to upload into the buffer. This may be either a
-    /// standard JavaScript array or a typed array.
-    /// @return The GLContext.
-    GLContext.prototype.uploadArrayBufferRegion = function (byteOffset, data)
-    {
-        if (!this.activeArrayBuffer)
-            return this;
-        var gl   = this.gl;
-        var buf  = this.activeArrayBuffer;
-        gl.bufferSubData(gl.ARRAY_BUFFER, byteOffset, data);
-        return this;
-    };
-
-    /// Uploads data into a region of an index buffer.
-    /// @param byteOffset The byte offset in the index buffer.
-    /// @param data The data to upload into the buffer. This may be either a
-    /// standard JavaScript array or a typed array.
-    /// @return The GLContext.
-    GLContext.prototype.uploadIndexBufferRegion = function (byteOffset, data)
-    {
-        if (!this.activeElementBuffer)
-            return this;
-        var gl   = this.gl;
-        var buf  = this.activeElementBuffer;
-        gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, byteOffset, data);
-        return this;
-    };
-
-    /// Sets the array buffer data sources for each vertex attribute for the
-    /// active program object.
-    /// @param attributes An array of vertex attribute descriptors. See the
-    /// function @a GLContext.createAttribute().
-    /// @param buffers An array of buffer resource proxies specifying the data
-    /// sources for each vertex attribute. Items in this array have a one-to-one
-    /// correspondence with @a attributes, such that attributes[i] is sourced
-    /// from buffers[i].
-    /// @return The GLContext.
-    GLContext.prototype.enableAttributes = function (attributes, buffers)
-    {
-        if (!this.activeProgram)
-            return this;
-
-        var gl      = this.gl;
-        var shader  = this.activeProgram;
-        var indices = shader.attributeIndices;
-        for (var i  = 0, n = attributes.length; i < n; ++i)
-        {
-            var ar  = attributes[i];
-            var ab  = buffers[i];
-            var ai  = indices[ar.name];
-            gl.enableVertexAttribArray(ai);
-            gl.vertexAttribPointer(
-                ai,
-                ar.dimension,
-                ar.dataType,
-                ar.normalize,
-                ab.elementSize,
-                ar.byteOffset);
-        }
-        return this;
-    };
-
-    /// Sets a constant vertex attribute value for the active program object.
-    /// @param name The name of the attribute. This should match the name of
-    /// the attribute in the currently bound vertex shader.
-    /// @param value The constant attribute value. For vector attribute types
-    /// this is either a JavaScript Number array or Float32Array instance. For
-    /// scalar attribute types, this is a single JavaScript Number value.
-    /// @return The GLContext.
-    GLContext.prototype.setConstantAttribute = function (name, value)
-    {
-        if (!this.activeProgram)
-            return this;
-
-        var gl     = this.gl;
-        var glsl   = TypeNames;
-        var shader = this.activeProgram;
-        var index  = shader.attributeIndices[name];
-        var type   = shader.attributeTypes[name];
-        switch (type)
-        {
-            case glsl.VEC4:
-                gl.vertexAttrib4fv(index, value);
-                break;
-            case glsl.VEC3:
-                gl.vertexAttrib3fv(index, value);
-                break;
-            case glsl.VEC2:
-                gl.vertexAttrib2fv(index, value);
-                break;
-            case glsl.FLOAT:
-                gl.vertexAttrib1f(index, value);
-                break;
-        }
-        gl.disableVertexAttribArray(index); // use the constant attribute value
-        return this;
-    }
-
-    /// Submits a batch of (non-indexed) triangles to be rendered.
-    /// @param count The number of vertices to read. The number of triangles
-    /// submitted in the batch is @a count / 3.
-    /// @param startIndex The zero-based index of the first vertex to read.
-    /// @return The GLContext.
-    GLContext.prototype.drawPrimitives = function (count, startIndex)
-    {
-        startIndex  = startIndex || 0;
-        var gl      = this.gl;
-        gl.drawArrays(gl.TRIANGLES, startIndex, count);
-        return this;
-    };
-
-    /// Submits a batch of indexed triangles to be rendered.
-    /// @param count The number of indices to read. The number of triangles
-    /// submitted in the batch is @a count / 3.
-    /// @param startIndex The zero-based index of the first vertex index.
-    /// @return The GLContext.
-    GLContext.prototype.drawIndexed = function (count, startIndex)
-    {
-        if (!this.activeElementBuffer)
-            return this;
-
-        var type;
-        var gl      = this.gl;
-        var indices = this.activeElementBuffer;
-        startIndex  = startIndex || 0;
-        var offset  = startIndex  * indices.elementSize;
-        switch (indices.elementSize)
-        {
-            case 1:  type = gl.UNSIGNED_BYTE;   break;
-            case 2:  type = gl.UNSIGNED_SHORT;  break;
-            case 4:  type = gl.UNSIGNED_INT;    break;
-            default: return this;
-        }
-        gl.drawElements(gl.TRIANGLES, count, type, offset);
-        return this;
-    };
-
-    /// Performs a test to determine whether the current runtime environment
-    /// supports WebGL; however, just because the runtime environment supports
-    /// WebGL does not guarantee that context creation will be successful.
-    /// @return true if the runtime environment supports WebGL.
-    function isSupported()
-    {
-        return (window.WebGLRenderingContext ? true : false);
-    }
-
-    /// Attempts to create a new WebGL rendering context.
-    /// @param canvas The DOM Canvas element to which WebGL will render.
-    /// @param attributes A WebGLContextAttributes object. See
-    /// https://www.khronos.org/registry/webgl/specs/1.0/#5.2
-    /// @return A new instance of GLContext, or undefined if WebGL is not
-    /// supported or the context cannot be created (blacklisted driver, etc.)
-    function createContext(canvas, attributes)
-    {
-        var gl    = null;
-        var names = [
-            'webgl',
-            'experimental-webgl',
-            'webkit-3d',
-            'moz-webgl'
-        ];
-
-        // attempt to create the WebGLRenderingContext:
-        // https://www.khronos.org/registry/webgl/specs/1.0/#5.13
-        // different browsers use different names, so try them all.
-        // eventually, we should only have to support 'webgl'.
-        for (var i = 0, n = names.length; i < n; ++i)
-        {
-            try
-            {
-                gl = canvas.getContext(names[i], attributes);
-            }
-            catch (error)
-            {
-                // don't do anything here, we'll try the next name.
-            }
-            if (gl) return new GLContext(gl, canvas);
-        }
-    }
-
-    /// Creates an object describing a vertex attribute within an array buffer.
-    /// @param name The name of the attribute. This should match the name of the
-    /// corresponding attribute in the vertex shader.
-    /// @param type One of BYTE, UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, INT,
-    /// UNSIGNED_INT or FLOAT indicating how the data should be interpreted.
-    /// @param offset The byte offset of the attribute from the start of the
-    /// vertex record.
-    /// @param dimension The number of values of the specified type that make up
-    /// the attribute; for example, 3 indicates a 3-component vector.
-    /// @param normalize A boolean value indicating whether the hardware should
-    /// convert non-floating point data into the range [0, 1] before use. The
-    /// default value is false.
-    /// @return An object describing the vertex attribute.
-    /// obj.name The name of the attribute.
-    /// obj.dataType The WebGL data type of the attribute.
-    /// obj.byteOffset The byte offset from the start of the vertex.
-    /// obj.dimension The number of values that make up the attribute.
-    /// obj.normalize A boolean value indicating whether the hardware will
-    /// convert non-floating point data into the range [0, 1] before use.
-    function createAttribute(name, type, offset, dimension, normalize)
-    {
-        return {
-            name       : name      || '',
-            dataType   : DataType[(type || 'FLOAT')],
-            byteOffset : offset    || 0,
-            dimension  : dimension || 4,
-            normalize  : normalize || false
-        };
-    }
-
-    /// Computes the size of a single buffer attribute, in bytes, based on its
-    /// type and dimension.
-    /// @param attribute A vertex attribute descriptor. See the function
-    /// @a WebGL.createAttribute().
-    /// @return The size of the specified vertex attribute, in bytes.
-    function computeAttributeSize(attribute)
-    {
-        if (!attribute)
-            return 0;
-
-        var Types       = DataType;
-        switch (attribute.dataType)
-        {
-            case Types.FLOAT:
-            case Types.INT:
-            case Types.UNSIGNED_INT:
-                return 4 * attribute.dimension;
-            case Types.BYTE:
-            case Types.UNSIGNED_BYTE:
-                return 1 * attribute.dimension;
-            case Types.SHORT:
-            case Types.UNSIGNED_SHORT:
-                return 2 * attribute.dimension;
-            default:
-                break;
-        }
-        return 0;
-    }
-
-    /// Computes the size of a logical buffer element composed of one or more
-    /// sub-elements.
-    /// @param attributes The vertex attribute descriptors for each sub-element
-    /// in the buffer. See the function @a WebGL.createAttribute().
-    /// @return The size of the specified buffer element, in bytes.
-    function computeBufferStride(attributes)
-    {
-        var count  = attributes.length;
-        if (count == 0)
-            return 0;
-
-        // sum the byte offsets and then add in the size of the final attribute.
-        // this ensures that we properly account for any user-added padding.
-        var e = attributes[count-1];
-        var o = e.byteOffset;
-        var s = computeAttributeSize(e);
-        return (o+s);
-    }
-
-    /// Creates an object containing array buffer views, strides and offsets
-    /// for a given buffer and its attribute description. The views allow for
-    /// dynamic modification of interleaved buffers.
-    /// @param buffer The ArrayBuffer backing store.
-    /// @param attributes The vertex attribute descriptors for each sub-element
-    /// in the buffer. See the function @a WebGL.createAttribute().
-    /// @return An object providing for easy access to the data in the
-    /// interleaved vertex array.
-    /// obj.arrayViews An array of @a attributes.length ArrayBufferView
-    /// instances of the appropriate type (Float32Array, Int16Array, etc.)
-    /// obj.baseOffsets An array of @a attributes.length numbers specifying the
-    /// base offset within @a obj.arrayViews of the attribute data, in units of
-    /// the appropriate type (Float32, Int16, etc.) These values should remain
-    /// constant and not be modified by the caller.
-    /// obj.offsets An array of @a attributes.length numbers specifying the
-    /// current offset within @a obj.arrayViews of the attribute data for the
-    /// current vertex, in units of the appropriate type (Float32, Int16, etc.)
-    /// This array is intended for modification during buffer iteration, and
-    /// may be reset to the base offsets by calling @a WebGL.resetBufferViews().
-    /// obj.sizes An array of @a attributes.length numbers specifying the size
-    /// of each vertex attribute, in units of the appropriate type. These values
-    /// should remain constant and not be modified by the caller.
-    function createBufferViews(buffer, attributes)
-    {
-        var Types   = DataType;
-        var stride  = computeBufferStride(attributes);
-        var offsets = new Array(attributes.length);
-        var current = new Array(attributes.length);
-        var sizes   = new Array(attributes.length);
-        var views   = new Array(attributes.length);
-        for (var i  = 0,  n   = attributes.length; i < n; ++i)
-        {
-            var rec = attributes[i];
-            var ofs = rec.byteOffset;
-            switch (rec.dataType)
-            {
-                case Types.FLOAT:
-                    views[i]   = new Float32Array(buffer);
-                    sizes[i]   = stride / 4;
-                    offsets[i] = ofs    / 4;
-                    current[i] = ofs    / 4;
-                    break;
-                case Types.UNSIGNED_BYTE:
-                    views[i]   = new Uint8Array(buffer);
-                    sizes[i]   = stride / 1;
-                    offsets[i] = ofs    / 1;
-                    current[i] = ofs    / 1;
-                    break;
-                case Types.UNSIGNED_SHORT:
-                    views[i]   = new Uint16Array(buffer);
-                    sizes[i]   = stride / 2;
-                    offsets[i] = ofs    / 2;
-                    current[i] = ofs    / 2;
-                    break;
-                case Types.UNSIGNED_INT:
-                    views[i]   = new Uint32Array(buffer);
-                    sizes[i]   = stride / 4;
-                    offsets[i] = ofs    / 4;
-                    current[i] = ofs    / 4;
-                    break;
-                case Types.BYTE:
-                    views[i]   = new Int8Array(buffer);
-                    sizes[i]   = stride / 1;
-                    offsets[i] = ofs    / 1;
-                    current[i] = ofs    / 1;
-                    break;
-                case Types.SHORT:
-                    views[i]   = new Int16Array(buffer);
-                    sizes[i]   = stride / 2;
-                    offsets[i] = ofs    / 2;
-                    current[i] = ofs    / 2;
-                    break;
-                case Types.INT:
-                    views[i]   = new Int32Array(buffer);
-                    sizes[i]   = stride / 4;
-                    offsets[i] = ofs    / 4;
-                    current[i] = ofs    / 4;
-                    break;
-                default:
-                    return null; // invalid attribute dataType
-            }
-        }
-        return {
-            arrayViews : views,
-            baseOffsets: offsets,
-            offsets    : current,
-            sizes      : sizes
-        };
-    }
-
-    /// Resets the values in the @a views.offsets field to the base values
-    /// specified by @a views.baseOffsets. This function should be called prior
-    /// to iterating over the contents of the vertex array buffer.
-    /// @param views An object providing views into a vertex array buffer. See
-    /// the function WebGL.createBufferViews().
-    /// @return A reference to @a views.
-    function resetBufferViews(views)
-    {
-        var base    = views.baseOffsets;
-        var curr    = views.offsets;
-        for (var i  = 0, n = curr.length; i < n; ++i)
-            curr[i] = base[i];
-        return views;
-    }
-
-    /// Given a set of vertex attribute definitions and a set of arrays filled
-    /// with data for each individual attribute, constructs an interleaved
-    /// ArrayBuffer containing the vertex data.
-    /// @param attributes The vertex attribute descriptors for each sub-element
-    /// in the buffer. See the function @a GLContext.createAttribute().
-    /// @param arrays An array of JavaScript arrays. Each element specifies the
-    /// data for the corresponding vertex attribute.
-    /// @param count The number of vertices specified by the arrays.
-    /// @return An object containing the results of the operation.
-    /// obj.buffer A new ArrayBuffer instance containing the interleaved data.
-    /// obj.view The data necessary to modify the interleaved array buffer. See
-    /// the function @WebGL.createBufferViews().
-    function interleaveArrays(attributes, arrays, count)
-    {
-        var stride = computeBufferStride(attributes);
-        var buffer = new ArrayBuffer(stride * count);
-        var viewOb = createBufferViews(buffer, attributes);
-        var offset = viewOb.offsets;
-        var sizes  = viewOb.sizes;
-        var views  = viewOb.arrayViews;
-        for (var i = 0; i < count; ++i) /* vertex */
-        {
-            for (var j = 0, n = attributes.length; j < n; ++j) /* attribute */
-            {
-                var ar = attributes[j];// select the vertex attribute record
-                var sa = arrays[j];    // select the source data array
-                var o  = offset[j];    // offset of element in FLOAT, etc.
-                var dv = views[j];     // view for element
-                var vd = ar.dimension; // vector dimension
-                var bi = i * vd;       // base index of vertices[i] data
-                for (var k = 0; k < vd; ++k)
-                    dv[o + k]  = sa[bi  + k];
-                offset[j] += sizes[j]; // move to the next element in view
-            }
-        }
-        return {
-            buffer : buffer,
-            view   : resetBufferViews(viewOb)
-        };
-    }
-
-    /// Set the functions exported from this module.
-    exports.Emitter              = Emitter;
-    exports.inherits             = inherits;
-    exports.isSupported          = isSupported;
-    exports.createContext        = createContext;
-    exports.createAttribute      = createAttribute;
-    exports.computeAttributeSize = computeAttributeSize;
-    exports.computeBufferStride  = computeBufferStride;
-    exports.createBufferViews    = createBufferViews;
-    exports.resetBufferViews     = resetBufferViews;
-    exports.interleaveArrays     = interleaveArrays;
     return exports;
 }  (WebGL || {}));
