@@ -433,8 +433,9 @@ var WebGL = (function (exports)
         GRAPHICS_SHADER     : 13, /// standard vertex+pixel shader program
         COMPUTE_SHADER      : 14, /// WebCL-style compute shader program
         BLEND_STATE         : 15, /// a group of states for alpha blending
-        DEPTH_STENCIL_STATE : 16, /// a group of states for depth/stencil test
-        RASTER_STATE        : 17  /// a group of states for primitive raster
+        CLEAR_STATE         : 16, /// a group of states for framebuffer clearing
+        DEPTH_STENCIL_STATE : 17, /// a group of states for depth/stencil test
+        RASTER_STATE        : 18  /// a group of states for primitive raster
     };
 
     /// @summary An array whose elements consist of the names of all of the
@@ -643,7 +644,7 @@ var WebGL = (function (exports)
         {
             initEnumStrings();
         }
-        var str   = WebGLEnumStrings[value];
+        var str   = WebGLEnumStringsPretty[value];
         if (str === undefined)
             str   = '0x' + value.toString(16) + ' (INVALID_ENUM)';
         return str;
@@ -2434,6 +2435,108 @@ var WebGL = (function (exports)
         return this; // nothing to do for this type
     };
 
+    /// @summary Constructor function for a type storing the clear values and 
+    /// information on which buffers to clear for a given render target.
+    /// @return A reference to the new ClearState instance.
+    var ClearState = function ()
+    {
+        if (!(this instanceof ClearState))
+            return new ClearState();
+
+        this.type         = ResourceType.STATE_OBJECT;
+        this.subType      = ResourceSubType.CLEAR_STATE;
+        this.clearColor   = true;
+        this.clearDepth   = true;
+        this.clearStencil = true;
+        this.colorValue   = [0.0, 0.0, 0.0, 0.0];
+        this.depthValue   =  1.0;
+        this.stencilValue =  0;
+        this.clearFlags   =  0;
+        return this;
+    };
+
+    /// @summary Serializes the current contents of the instance into an object
+    /// that can be passed to ClearState.specifyAttributes() to restore state.
+    /// @return An object with the same fields expected on the args argument of
+    /// the ClearState.specifyAttributes() function.
+    ClearState.prototype.serialize = function ()
+    {
+        return {
+            clearColor     : this.clearColor, 
+            clearDepth     : this.clearDepth, 
+            clearStencil   : this.clearStencil, 
+            colorValue     : this.colorValue.splice(0), 
+            depthValue     : this.depthValue, 
+            stencilValue   : this.stencilValue
+        };
+    };
+
+    /// @summary Specifies the creation attributes of the clear state.
+    /// @param args An object specifying creation attributes for the resource.
+    /// @param args.clearColor true to clear the color buffer to the RGBA value
+    /// indicated by @a args.colorValue.
+    /// @param args.clearDepth true to clear the depth buffer to the depth 
+    /// value indicated by @a args.depthValue.
+    /// @param args.clearStencil true to clear the stencil buffer to the value 
+    /// indicated by @a args.stencilValue.
+    /// @param args.colorValue An array of four Number values, each in [0, 1] 
+    /// and specifying the clear values for the RGBA color channels. The clear
+    /// color defaults to transparent black (all values are 0.)
+    /// @param args.depthValue The depth buffer clear value. Defaults to 1.0.
+    /// @param args.stencilValue The stencil buffer clear value. Defaults to 0.
+    /// @return true if the creation attributes were validated and stored.
+    ClearState.prototype.specifyAttributes = function (args)
+    {
+        var def = function (value, default_value)
+            {
+                if (value !== undefined)
+                    return value;
+                else
+                    return default_value;
+            };
+
+        // ensure that all required arguments are specified.
+        args = args || {};
+        args.clearColor   = def(args.clearColor,   true);
+        args.clearDepth   = def(args.clearDepth,   true);
+        args.clearStencil = def(args.clearStencil, true);
+        args.colorValue   = def(args.colorValue,   [0.0, 0.0, 0.0, 0.0]);
+        args.depthValue   = def(args.depthValue,    0.0);
+        args.stencilValue = def(args.stencilValue,    0);
+
+        // convert string values to their corresponding enum value.
+        var GL            = WebGLConstants;
+        var flags         = 0;
+        this.clearColor   = args.clearColor;
+        this.clearDepth   = args.clearDepth;
+        this.clearStencil = args.clearStencil;
+        this.colorValue   = args.colorValue.splice(0);
+        this.depthValue   = args.depthValue;
+        this.stencilValue = args.stencilValue;
+        if (args.clearColor)   flags |= GL.COLOR_BUFFER_BIT;
+        if (args.clearDepth)   flags |= GL.DEPTH_BUFFER_BIT;
+        if (args.clearStencil) flags |= GL.STENCIL_BUFFER_BIT;
+        this.clearFlags      = flags;
+        return true;
+    };
+
+    /// @summary Creates any backing WebGL resources.
+    /// @param gl The WebGLRenderingContext.
+    /// @param debug An optional WebGL.Emitter object used for debug reporting.
+    /// @return true if the WebGL resources were created successfully.
+    ClearState.prototype.createBackingResources = function (gl, debug)
+    {
+        return true; // nothing to do for this type
+    };
+
+    /// @summary Destroys any backing WebGL resources.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The ClearState.
+    ClearState.prototype.deleteBackingResources = function (gl)
+    {
+        return this; // nothing to do for this type
+    };
+
     /// @summary Constructor function for a type storing values for all render
     /// states associated with rasterization.
     /// @return A reference to the new RasterState instance.
@@ -2766,6 +2869,7 @@ var WebGL = (function (exports)
         this.activeArrayBuffer       = null;
         this.activeIndexBuffer       = null;
         this.activeBlendState        = new BlendState();
+        this.activeClearState        = new ClearState();
         this.activeRasterState       = new RasterState();
         this.activeDepthStencilState = new DepthStencilState();
         this.activeViewport          = {
@@ -2955,6 +3059,41 @@ var WebGL = (function (exports)
             curColor[2] = newColor[2];
             curColor[3] = newColor[3];
         }
+        return this;
+    };
+
+    /// @summary Applies a render target clear state.
+    /// @param gl The WebGLRenderingContext.
+    /// @param state The ClearState resource.
+    /// @return The DrawContext.
+    DrawContext.prototype.applyClearState = function (gl, state)
+    {
+        var active = this.activeClearState;
+        if (active.colorValue[0] !== state.colorValue[0] || 
+            active.colorValue[1] !== state.colorValue[1] || 
+            active.colorValue[2] !== state.colorValue[2] || 
+            active.colorValue[3] !== state.colorValue[3])
+        {
+            gl.clearColor(state.colorValue[0], state.colorValue[1], state.colorValue[2], state.colorValue[3]);
+            active.colorValue[0] = state.colorValue[0];
+            active.colorValue[1] = state.colorValue[1];
+            active.colorValue[2] = state.colorValue[2];
+            active.colorValue[3] = state.colorValue[3];
+        }
+        if (active.depthValue !== state.depthValue)
+        {
+            gl.clearDepth(state.depthValue);
+            active.depthValue = state.depthValue;
+        }
+        if (active.stencilValue !== state.stencilValue)
+        {
+            gl.clearStencil(state.stencilValue);
+            active.stencilValue = state.stencilValue;
+        }
+        active.clearColor   = state.clearColor;
+        active.clearDepth   = state.clearDepth;
+        active.clearStencil = state.clearStencil;
+        active.clearFlags   = state.clearFlags;
         return this;
     };
 
@@ -3201,6 +3340,15 @@ var WebGL = (function (exports)
             gl.depthMask(depth);
             this.activeDepthStencilState.depthWriteEnabled = depth;
         }
+        return this;
+    };
+
+    /// @summary Clears the active framebuffer.
+    /// @param gl The WebGLRenderingContext.
+    /// @return The DrawContext.
+    DrawContext.prototype.clearFramebuffer = function (gl)
+    {
+        gl.clear(this.activeClearState.clearFlags);
         return this;
     };
 
